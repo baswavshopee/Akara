@@ -1,0 +1,47 @@
+require("dotenv").config();
+const supabase = require("./config/supabase");
+
+const products = [
+  // BADGES
+  { name: "Classic Enamel Badge", category: "Badges", price: 4.99, original_price: 7.99, rating: 4.8, reviews: 124, image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=600&q=80", description: "Premium quality enamel badge with vibrant colors and a butterfly clutch pin. Perfect for jackets, bags, or hats.", sizes: ["25mm", "38mm", "50mm"], colors: ["Gold", "Silver", "Bronze"], in_stock: true, featured: true, badge: "Best Seller" },
+  { name: "Custom Photo Button Badge", category: "Badges", price: 2.99, original_price: null, rating: 4.5, reviews: 87, image: "https://images.unsplash.com/photo-1606206591513-adbfbdd44e27?w=600&q=80", description: "Personalized button badge with your own photo or design. Great for events, promotions, and gifts.", sizes: ["25mm", "38mm"], colors: ["White", "Clear"], in_stock: true, featured: false, badge: null },
+  { name: "Vintage Pin Badge Set", category: "Badges", price: 12.99, original_price: 18.99, rating: 4.9, reviews: 203, image: "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=600&q=80", description: "Set of 5 vintage-inspired enamel pin badges. Retro designs with a modern finish.", sizes: ["One Size"], colors: ["Multicolor"], in_stock: true, featured: true, badge: "Sale" },
+  { name: "Glitter Sparkle Badge", category: "Badges", price: 3.49, original_price: null, rating: 4.3, reviews: 56, image: "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=600&q=80", description: "Eye-catching glitter badge that sparkles in the light. Perfect for parties and celebrations.", sizes: ["38mm"], colors: ["Pink", "Blue", "Gold"], in_stock: true, featured: false, badge: "New" },
+  // MAGNETS
+  { name: "Custom Photo Fridge Magnet", category: "Magnets", price: 5.99, original_price: 8.99, rating: 4.7, reviews: 198, image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80", description: "High-quality photo magnet printed on premium glossy material with strong magnetic backing.", sizes: ["5x7cm", "8x10cm", "10x15cm"], colors: ["Full Color"], in_stock: true, featured: true, badge: "Best Seller" },
+  { name: "Epoxy Dome Magnet", category: "Magnets", price: 3.99, original_price: null, rating: 4.6, reviews: 142, image: "https://images.unsplash.com/photo-1628367872958-e7b6c5d4d35b?w=600&q=80", description: "Glossy dome-effect magnet with vibrant print. Weather-resistant and long-lasting.", sizes: ["6cm Round", "8cm Round"], colors: ["Full Color"], in_stock: true, featured: false, badge: null },
+  { name: "Wooden Engraved Magnet", category: "Magnets", price: 7.99, original_price: 10.99, rating: 4.9, reviews: 89, image: "https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=600&q=80", description: "Rustic wooden magnet with laser-engraved design. A unique and eco-friendly keepsake.", sizes: ["6x4cm", "8x5cm"], colors: ["Natural Wood", "Dark Oak"], in_stock: true, featured: true, badge: "New" },
+  { name: "City Skyline Magnet Set", category: "Magnets", price: 14.99, original_price: 19.99, rating: 4.4, reviews: 61, image: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80", description: "Set of 3 beautifully illustrated city skyline magnets. Ideal travel souvenir or gift.", sizes: ["One Size"], colors: ["Blue", "Gold", "Red"], in_stock: false, featured: false, badge: "Sale" },
+  // POSTERS
+  { name: "Motivational Quote Poster", category: "Posters", price: 9.99, original_price: 14.99, rating: 4.8, reviews: 312, image: "https://images.unsplash.com/photo-1561731216-c3a4d99437d5?w=600&q=80", description: "Inspiring motivational print on premium matte paper. Ready to frame and display.", sizes: ["A4", "A3", "A2"], colors: ["Black & White", "Color"], in_stock: true, featured: true, badge: "Best Seller" },
+  { name: "Vintage Travel Poster", category: "Posters", price: 12.99, original_price: null, rating: 4.7, reviews: 175, image: "https://images.unsplash.com/photo-1519451241324-20b4ea2c4220?w=600&q=80", description: "Retro-style travel poster with a vintage aesthetic. Great for living rooms, offices, and cafes.", sizes: ["A3", "A2", "A1"], colors: ["Vintage Tones"], in_stock: true, featured: true, badge: null },
+  { name: "Minimalist Art Print", category: "Posters", price: 8.99, original_price: 12.99, rating: 4.5, reviews: 98, image: "https://images.unsplash.com/photo-1579541591970-e5a107588ded?w=600&q=80", description: "Clean, minimalist line art print perfect for modern interiors. Printed on acid-free paper.", sizes: ["A5", "A4", "A3"], colors: ["Black", "Terracotta", "Navy"], in_stock: true, featured: false, badge: "New" },
+  { name: "Galaxy Space Poster", category: "Posters", price: 11.99, original_price: 16.99, rating: 4.9, reviews: 241, image: "https://images.unsplash.com/photo-1465101162946-4377e57745c3?w=600&q=80", description: "Stunning high-resolution galaxy and space print. Vibrant colors on premium satin paper.", sizes: ["A3", "A2", "A1"], colors: ["Full Color"], in_stock: true, featured: false, badge: "Sale" },
+  // PLAQUES
+  { name: "Custom Wooden Award Plaque", category: "Plaques", price: 29.99, original_price: 39.99, rating: 4.9, reviews: 156, image: "https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?w=600&q=80", description: "Elegant wooden plaque with gold engraving. Perfect for awards, recognition, and achievements.", sizes: ["Small", "Medium", "Large"], colors: ["Walnut", "Oak", "Mahogany"], in_stock: true, featured: true, badge: "Best Seller" },
+  { name: "Metal Engraved Plaque", category: "Plaques", price: 24.99, original_price: null, rating: 4.7, reviews: 89, image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&q=80", description: "Professional-grade brushed metal plaque. Ideal for offices, doors, and commemorative displays.", sizes: ["10x15cm", "15x20cm", "20x30cm"], colors: ["Silver", "Gold", "Bronze"], in_stock: true, featured: false, badge: null },
+  { name: "Memorial Photo Plaque", category: "Plaques", price: 34.99, original_price: 44.99, rating: 4.8, reviews: 203, image: "https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=600&q=80", description: "Heartfelt memorial plaque with photo print and custom text. Weatherproof for indoor and outdoor use.", sizes: ["15x20cm", "20x25cm"], colors: ["Black", "White"], in_stock: true, featured: true, badge: "Popular" },
+  { name: "Acrylic Glass Plaque", category: "Plaques", price: 19.99, original_price: 27.99, rating: 4.6, reviews: 74, image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=600&q=80", description: "Modern clear acrylic plaque with UV-printed full-color design. Sleek and contemporary.", sizes: ["A5", "A4"], colors: ["Clear", "Frosted"], in_stock: true, featured: false, badge: "New" },
+  // BOOKMARKS
+  { name: "Leather Embossed Bookmark", category: "Bookmarks", price: 6.99, original_price: 9.99, rating: 4.8, reviews: 267, image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&q=80", description: "Genuine leather bookmark with elegant embossed design. A sophisticated gift for book lovers.", sizes: ["Standard"], colors: ["Brown", "Black", "Tan"], in_stock: true, featured: true, badge: "Best Seller" },
+  { name: "Custom Photo Bookmark", category: "Bookmarks", price: 3.99, original_price: null, rating: 4.5, reviews: 143, image: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=600&q=80", description: "Personalized laminated bookmark with your favorite photo or design. Comes with a tassel.", sizes: ["5x15cm", "5x20cm"], colors: ["Glossy", "Matte"], in_stock: true, featured: false, badge: null },
+  { name: "Metal Engraved Bookmark", category: "Bookmarks", price: 8.99, original_price: 12.99, rating: 4.9, reviews: 189, image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&q=80", description: "Premium stainless steel bookmark with custom engraving. A timeless keepsake for readers.", sizes: ["Standard"], colors: ["Silver", "Gold", "Rose Gold"], in_stock: true, featured: true, badge: "Popular" },
+  { name: "Illustrated Bookmark Set", category: "Bookmarks", price: 7.99, original_price: 10.99, rating: 4.6, reviews: 94, image: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=600&q=80", description: "Set of 5 beautifully illustrated bookmarks. Printed on thick card with rounded corners.", sizes: ["One Size"], colors: ["Multicolor"], in_stock: true, featured: false, badge: "Sale" },
+  // FIGURINES
+  { name: "Custom Miniature Figurine", category: "Figurines", price: 29.99, original_price: 39.99, rating: 4.8, reviews: 42, image: "https://images.unsplash.com/photo-1608889825103-eb5ed706fc64?w=600&q=80", description: "Hand-painted miniature figurine based on your photos.", sizes: ["Small", "Medium"], colors: ["Custom"], in_stock: true, featured: true, badge: "New" },
+];
+
+async function seed() {
+  console.log("Deleting existing products…");
+  const { error: delErr } = await supabase.from("products").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+
+  console.log("Inserting products…");
+  const { error: insErr } = await supabase.from("products").insert(products);
+  if (insErr) { console.error("Insert failed:", insErr.message); process.exit(1); }
+
+  console.log(`Seeded ${products.length} products successfully.`);
+  process.exit(0);
+}
+
+seed();
