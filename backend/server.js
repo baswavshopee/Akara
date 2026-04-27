@@ -8,6 +8,7 @@ const uploadRoutes = require("./routes/uploadRoutes");
 const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
 const orderRoutes = require("./routes/orderRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const supabase = require("./config/supabase");
 
 const app = express();
@@ -21,6 +22,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payment", paymentRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Akara API running" }));
 

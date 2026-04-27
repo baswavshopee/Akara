@@ -1,9 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../context/CartContext";
-
-const WHATSAPP_NUMBER = "919999999999"; // Replace with your WhatsApp business number (country code + number, no +)
 
 export default function CheckoutPage() {
   const { cart, totalPrice, clearCart } = useCart();
@@ -20,10 +18,22 @@ export default function CheckoutPage() {
   });
 
   const [errors, setErrors] = useState({});
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const shipping = totalPrice > 0 ? 5.99 : 0;
   const tax = totalPrice * 0.1;
   const finalTotal = totalPrice + tax + shipping;
+
+  // Dynamically load Razorpay script
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   if (cart.length === 0) {
     return (
@@ -56,30 +66,6 @@ export default function CheckoutPage() {
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
   }
 
-  function buildWhatsAppMessage() {
-    const itemLines = cart
-      .map((item) => `• ${item.name} x${item.qty} — ₹${(item.price * item.qty).toFixed(2)}`)
-      .join("\n");
-
-    return (
-      `*New Order from Akara*\n\n` +
-      `*Customer Details*\n` +
-      `Name: ${form.name}\n` +
-      `Phone: ${form.phone}\n` +
-      (form.email ? `Email: ${form.email}\n` : "") +
-      `\n*Delivery Address*\n` +
-      `${form.address}\n` +
-      `${form.city} - ${form.pincode}\n` +
-      (form.notes ? `\n*Notes:* ${form.notes}\n` : "") +
-      `\n*Order Summary*\n` +
-      `${itemLines}\n\n` +
-      `Subtotal: ₹${totalPrice.toFixed(2)}\n` +
-      `Shipping: ₹${shipping.toFixed(2)}\n` +
-      `Tax (10%): ₹${tax.toFixed(2)}\n` +
-      `*Total: ₹${finalTotal.toFixed(2)}*`
-    );
-  }
-
   async function handleSubmit(e) {
     e.preventDefault();
     const validationErrors = validate();
@@ -88,37 +74,85 @@ export default function CheckoutPage() {
       return;
     }
 
-    try {
-      await axios.post("/api/orders", {
-        customerName: form.name,
-        customerPhone: form.phone,
-        customerEmail: form.email,
-        address: form.address,
-        city: form.city,
-        pincode: form.pincode,
-        notes: form.notes,
-        items: cart.map((item) => ({
-          productId: item._id,
-          name: item.name,
-          price: item.price,
-          qty: item.qty,
-          image: item.image,
-          category: item.category,
-        })),
-        subtotal: totalPrice,
-        shipping,
-        tax,
-        total: finalTotal,
-      });
-    } catch {
-      // Order save failure shouldn't block the customer — WhatsApp still opens
-    }
+    setIsProcessing(true);
 
-    const message = buildWhatsAppMessage();
-    const encoded = encodeURIComponent(message);
-    clearCart();
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`, "_blank");
-    navigate("/");
+    try {
+      // 1. Create order on the backend to get Razorpay order_id
+      const { data: orderData } = await axios.post(
+        `${import.meta.env.VITE_API_URL || ""}/api/payment/create-order`,
+        { amount: finalTotal }
+      );
+
+      // 2. Open Razorpay checkout modal
+      const options = {
+        key: orderData.key,
+        amount: orderData.order.amount,
+        currency: orderData.order.currency,
+        name: "Akara",
+        description: "Order Payment",
+        order_id: orderData.order.id,
+        handler: async function (response) {
+          try {
+            // Optional: Verify payment signature here using another API call if needed
+            // await axios.post("/api/payment/verify-payment", response);
+
+            // 3. Save order to database
+            await axios.post(`${import.meta.env.VITE_API_URL || ""}/api/orders`, {
+              customerName: form.name,
+              customerPhone: form.phone,
+              customerEmail: form.email,
+              address: form.address,
+              city: form.city,
+              pincode: form.pincode,
+              notes: form.notes,
+              items: cart.map((item) => ({
+                productId: item._id,
+                name: item.name,
+                price: item.price,
+                qty: item.qty,
+                image: item.image,
+                category: item.category,
+              })),
+              subtotal: totalPrice,
+              shipping,
+              tax,
+              total: finalTotal,
+              paymentId: response.razorpay_payment_id,
+              paymentStatus: "paid"
+            });
+
+            clearCart();
+            alert("Payment successful! Your order has been placed.");
+            navigate("/"); // Or navigate to a dedicated success page
+          } catch (err) {
+            console.error("Error saving order:", err);
+            alert("Payment successful, but failed to save order. Please contact support.");
+          }
+        },
+        prefill: {
+          name: form.name,
+          email: form.email || "",
+          contact: form.phone,
+        },
+        theme: {
+          color: "#111111", // Akara dark theme color
+        },
+      };
+
+      const rzp1 = new window.Razorpay(options);
+      
+      rzp1.on("payment.failed", function (response) {
+        console.error("Payment Failed:", response.error);
+        alert(`Payment failed: ${response.error.description}`);
+      });
+
+      rzp1.open();
+    } catch (err) {
+      console.error("Error initiating Razorpay checkout:", err);
+      alert("Failed to initiate payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   }
 
   const inputStyle = (field) => ({
@@ -207,8 +241,9 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
+              disabled={isProcessing}
               style={{
-                background: "#25D366",
+                background: "var(--dark)",
                 color: "#fff",
                 border: "none",
                 width: "100%",
@@ -217,21 +252,19 @@ export default function CheckoutPage() {
                 fontWeight: "800",
                 textTransform: "uppercase",
                 letterSpacing: "2px",
-                cursor: "pointer",
+                cursor: isProcessing ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "12px",
+                opacity: isProcessing ? 0.7 : 1,
               }}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Place Order via WhatsApp
+              {isProcessing ? "Processing..." : "Pay & Place Order"}
             </button>
 
             <p style={{ fontSize: "0.85rem", color: "var(--gray)", marginTop: "16px", textAlign: "center" }}>
-              Clicking above will open WhatsApp with your order details. Our team will confirm and process your order.
+              Secure payments powered by Razorpay.
             </p>
           </form>
 
