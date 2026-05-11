@@ -16,11 +16,13 @@ function mapProduct(row) {
     reviews: row.reviews,
     image: row.image,
     description: row.description,
+    theme: row.theme,
     sizes: row.sizes || [],
     colors: row.colors || [],
     inStock: row.in_stock,
     featured: row.featured,
     badge: row.badge,
+    bannerImage: row.banner_image,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -32,6 +34,7 @@ router.get("/", async (req, res) => {
     let query = supabase.from("products").select("*").order("created_at", { ascending: false });
 
     if (req.query.category) query = query.eq("category", req.query.category);
+    if (req.query.theme) query = query.eq("theme", req.query.theme);
     if (req.query.search) query = query.ilike("name", `%${req.query.search}%`);
 
     const { data, error } = await query;
@@ -106,11 +109,13 @@ router.post("/", requireAdmin, async (req, res) => {
       reviews: body.reviews ?? 0,
       image: body.image,
       description: body.description,
+      theme: body.theme || null,
       sizes: body.sizes || [],
       colors: body.colors || [],
       in_stock: body.inStock ?? true,
       featured: body.featured ?? false,
       badge: body.badge ?? null,
+      banner_image: body.bannerImage ?? null,
     };
     const { data, error } = await supabase.from("products").insert(payload).select().single();
     if (error) throw error;
@@ -131,11 +136,13 @@ router.put("/:id", requireAdmin, async (req, res) => {
       original_price: body.originalPrice ?? null,
       image: body.image,
       description: body.description,
+      theme: body.theme || null,
       sizes: body.sizes || [],
       colors: body.colors || [],
       in_stock: body.inStock ?? true,
       featured: body.featured ?? false,
       badge: body.badge ?? null,
+      banner_image: body.bannerImage ?? null,
       updated_at: new Date().toISOString(),
     };
     const { data, error } = await supabase

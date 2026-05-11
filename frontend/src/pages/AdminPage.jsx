@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useRefreshBanners } from "../context/BannerContext";
 import SalesDashboard from "./SalesDashboard";
 
-const CATEGORIES = ["Badges", "Magnets", "Posters", "Plaques", "Bookmarks"];
+const CATEGORIES = ["Badges", "Magnets", "Posters", "Plaques", "Bookmarks", "Figurines", "Keychains", "Charms", "Squishies", "Stickers"];
+const THEMES = ["Comicverse", "Anime", "Western Pop", "Eastern Pop", "Mythology", "Sports", "Music", "Motivational", "Video Games"];
 const BADGE_OPTIONS = ["Best Seller", "Sale", "New", "Popular"];
 
 const emptyProduct = {
-  name: "", category: "Badges", price: "", originalPrice: "",
+  name: "", category: "Badges", theme: "", price: "", originalPrice: "",
   image: "", description: "", sizes: "", colors: "",
   inStock: true, featured: false, badge: "",
 };
@@ -19,19 +21,19 @@ const thStyle = {
   padding: "14px 16px", textAlign: "left", fontFamily: "Outfit",
   fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
 };
-const tdStyle = { padding: "12px 16px", fontSize: "0.9rem", borderBottom: "1px solid #f0f0f0" };
+const tdStyle = { padding: "12px 16px", fontSize: "0.9rem", borderBottom: "1px solid var(--border)", color: "var(--text)" };
 const actionBtn = {
   padding: "6px 14px", border: "none", borderRadius: 6,
   cursor: "pointer", fontWeight: 600, fontSize: "0.85rem",
 };
 const overlayStyle = {
-  position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+  position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)",
   zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
 };
 const modalStyle = {
-  background: "white", borderRadius: 16, padding: 32, maxWidth: 720,
+  background: "var(--card-bg)", color: "var(--text)", borderRadius: 16, padding: 32, maxWidth: 720,
   width: "100%", maxHeight: "90vh", overflowY: "auto",
-  boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
 };
 const fieldWrap = { display: "flex", flexDirection: "column" };
 const labelStyle = {
@@ -39,8 +41,9 @@ const labelStyle = {
   marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5,
 };
 const inputStyle = {
-  padding: "10px 14px", border: "1.5px solid #ddd", borderRadius: 8,
+  padding: "10px 14px", border: "1.5px solid var(--border)", borderRadius: 8,
   fontSize: "0.95rem", fontFamily: "Inter, sans-serif", width: "100%",
+  background: "var(--bg)", color: "var(--text)",
 };
 
 export default function AdminPage() {
@@ -50,190 +53,240 @@ export default function AdminPage() {
   const [events, setEvents] = useState([]);
   const [applications, setApplications] = useState([]);
   const [users, setUsers] = useState([]);
+  const [banners, setBanners] = useState([]);
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [msg, setMsg] = useState("");
 
-  const [productForm, setProductForm] = useState(emptyProduct);
-  const [eventForm, setEventForm] = useState(emptyEvent);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [editingEvent, setEditingEvent] = useState(null);
+  const [showCouponModal, setShowCouponModal] = useState(false);
+  const [couponForm, setCouponForm] = useState({ code: "", discount_percent: "", expiry_date: "" });
+
+  // Product Form
   const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState(emptyProduct);
+  const [productCategory, setProductCategory] = useState("All");
+  const [productSearch, setProductSearch] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Event Form
   const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventForm, setEventForm] = useState(emptyEvent);
+
+  // User/Invite
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
 
-  const [productSearch, setProductSearch] = useState("");
-  const [productCategory, setProductCategory] = useState("All");
-
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    loadProducts();
-    loadEvents();
-    loadApplications();
-  }, []);
-
-  useEffect(() => {
-    if (tab === "users") loadUsers();
-  }, [tab]);
+  const flash = (m) => {
+    setMsg(m);
+    setTimeout(() => setMsg(""), 3000);
+  };
 
   const authHeaders = async () => {
     const token = await getToken();
     return { Authorization: `Bearer ${token}` };
   };
 
-  const loadProducts = () => axios.get("/api/products").then((r) => setProducts(r.data));
-  const loadEvents = () => axios.get("/api/events").then((r) => setEvents(r.data));
-  const loadApplications = () =>
-    axios.get("/api/events/applications").then((r) => setApplications(r.data));
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  const loadAll = async () => {
+    setLoading(true);
+    await Promise.all([loadProducts(), loadEvents(), loadApplications(), loadUsers(), loadBanners(), loadCoupons()]);
+    setLoading(false);
+  };
+
+  const loadCoupons = async () => {
+    try {
+      const res = await axios.get("/api/coupons");
+      setCoupons(res.data);
+    } catch {}
+  };
+
+  const loadProducts = async () => {
+    try {
+      const res = await axios.get("/api/products");
+      setProducts(res.data);
+    } catch {}
+  };
+  const loadEvents = async () => {
+    try {
+      const res = await axios.get("/api/events");
+      setEvents(res.data);
+    } catch {}
+  };
+  const loadApplications = async () => {
+    try {
+      const headers = await authHeaders();
+      const res = await axios.get("/api/applications", { headers });
+      setApplications(res.data);
+    } catch {}
+  };
   const loadUsers = async () => {
-    const headers = await authHeaders();
-    axios.get("/api/users", { headers }).then((r) => setUsers(r.data));
+    try {
+      const headers = await authHeaders();
+      const res = await axios.get("/api/users", { headers });
+      setUsers(res.data);
+    } catch {}
+  };
+  const refreshGlobalBanners = useRefreshBanners();
+
+  const loadBanners = async () => {
+    try {
+      const res = await axios.get("/api/banners");
+      setBanners(res.data);
+      refreshGlobalBanners();
+    } catch {}
   };
 
-  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3000); };
-
-  // ── Product CRUD ──────────────────────────────────────────────
   const openAddProduct = () => {
-    setProductForm(emptyProduct);
     setEditingProduct(null);
+    setProductForm(emptyProduct);
     setShowProductModal(true);
   };
-
   const openEditProduct = (p) => {
+    setEditingProduct(p);
     setProductForm({
-      ...p,
-      sizes: p.sizes?.join(", ") || "",
-      colors: p.colors?.join(", ") || "",
-      originalPrice: p.originalPrice ?? "",
-      badge: p.badge ?? "",
+      name: p.name, category: p.category, theme: p.theme || "", price: p.price, originalPrice: p.originalPrice || "",
+      image: p.image, description: p.description, sizes: p.sizes?.join(", ") || "", colors: p.colors?.join(", ") || "",
+      inStock: p.inStock, featured: p.featured, badge: p.badge || "",
     });
-    setEditingProduct(p._id);
     setShowProductModal(true);
   };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("image", file);
-    try {
-      const headers = await authHeaders();
-      const res = await axios.post("/api/upload", fd, { headers });
-      setProductForm((f) => ({ ...f, image: res.data.imageUrl }));
-    } catch {
-      flash("Image upload failed.");
-    }
-    setUploading(false);
-  };
-
   const saveProduct = async () => {
+    if (!productForm.name || !productForm.price) return flash("Name and price required");
     setSaving(true);
-    const payload = {
-      ...productForm,
-      price: parseFloat(productForm.price),
-      originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : null,
-      sizes: productForm.sizes ? productForm.sizes.split(",").map((s) => s.trim()).filter(Boolean) : [],
-      colors: productForm.colors ? productForm.colors.split(",").map((s) => s.trim()).filter(Boolean) : [],
-      badge: productForm.badge || null,
-    };
     try {
       const headers = await authHeaders();
+      const data = {
+        ...productForm,
+        price: parseFloat(productForm.price),
+        originalPrice: productForm.originalPrice ? parseFloat(productForm.originalPrice) : null,
+        sizes: productForm.sizes.split(",").map(s => s.trim()).filter(Boolean),
+        colors: productForm.colors.split(",").map(c => c.trim()).filter(Boolean),
+      };
       if (editingProduct) {
-        await axios.put(`/api/products/${editingProduct}`, payload, { headers });
-        flash("Product updated.");
+        await axios.put(`/api/products/${editingProduct._id}`, data, { headers });
+        flash("Product updated!");
       } else {
-        await axios.post("/api/products", payload, { headers });
-        flash("Product added.");
+        await axios.post("/api/products", data, { headers });
+        flash("Product added!");
       }
       setShowProductModal(false);
       loadProducts();
-    } catch (err) {
-      flash(err.response?.data?.message || err.response?.data?.error || "Error saving product.");
+    } catch {
+      flash("Error saving product");
     }
     setSaving(false);
   };
-
   const deleteProduct = async (id) => {
-    if (!window.confirm("Delete this product? This cannot be undone.")) return;
-    const headers = await authHeaders();
-    await axios.delete(`/api/products/${id}`, { headers });
-    flash("Product deleted.");
-    loadProducts();
+    if (!window.confirm("Delete this product?")) return;
+    try {
+      const headers = await authHeaders();
+      await axios.delete(`/api/products/${id}`, { headers });
+      flash("Product deleted");
+      loadProducts();
+    } catch {
+      flash("Error deleting product");
+    }
   };
 
-  // ── Event CRUD ────────────────────────────────────────────────
   const openAddEvent = () => {
-    setEventForm(emptyEvent);
     setEditingEvent(null);
+    setEventForm(emptyEvent);
     setShowEventModal(true);
   };
-
   const openEditEvent = (ev) => {
+    setEditingEvent(ev);
     setEventForm({
-      ...ev,
-      date: ev.date ? new Date(ev.date).toISOString().slice(0, 16) : "",
-      applicationLink: ev.applicationLink || "",
+      name: ev.name, description: ev.description, location: ev.location,
+      date: ev.date.split("T")[0], applicationLink: ev.applicationLink || "",
     });
-    setEditingEvent(ev._id);
     setShowEventModal(true);
   };
-
   const saveEvent = async () => {
+    if (!eventForm.name || !eventForm.date) return flash("Name and date required");
     setSaving(true);
-    const payload = { ...eventForm, applicationLink: eventForm.applicationLink || null };
     try {
       const headers = await authHeaders();
       if (editingEvent) {
-        await axios.put(`/api/events/${editingEvent}`, payload, { headers });
-        flash("Event updated.");
+        await axios.put(`/api/events/${editingEvent._id}`, eventForm, { headers });
+        flash("Event updated!");
       } else {
-        await axios.post("/api/events", payload, { headers });
-        flash("Event created.");
+        await axios.post("/api/events", eventForm, { headers });
+        flash("Event added!");
       }
       setShowEventModal(false);
       loadEvents();
-    } catch (err) {
-      flash(err.response?.data?.message || err.response?.data?.error || "Error saving event.");
+    } catch {
+      flash("Error saving event");
     }
     setSaving(false);
   };
-
   const deleteEvent = async (id) => {
     if (!window.confirm("Delete this event?")) return;
-    const headers = await authHeaders();
-    await axios.delete(`/api/events/${id}`, { headers });
-    flash("Event deleted.");
-    loadEvents();
+    try {
+      const headers = await authHeaders();
+      await axios.delete(`/api/events/${id}`, { headers });
+      flash("Event deleted");
+      loadEvents();
+    } catch {
+      flash("Error deleting event");
+    }
   };
 
-  // ── User management ───────────────────────────────────────────
   const toggleRole = async (u) => {
-    const newRole = u.role === "admin" ? "user" : "admin";
-    const headers = await authHeaders();
     try {
-      await axios.put(`/api/users/${u.id}/role`, { role: newRole }, { headers });
-      flash(`${u.email} is now ${newRole === "admin" ? "an admin" : "a regular user"}.`);
+      const headers = await authHeaders();
+      const newRole = u.role === "admin" ? "user" : "admin";
+      await axios.put(`/api/users/${u._id}/role`, { role: newRole }, { headers });
+      flash(`User role updated to ${newRole}`);
       loadUsers();
-    } catch (err) {
-      flash(err.response?.data?.error || "Failed to update role.");
-    }
+    } catch { flash("Error updating role"); }
   };
 
   const sendInvite = async () => {
     if (!inviteEmail) return;
     setSaving(true);
-    const headers = await authHeaders();
     try {
+      const headers = await authHeaders();
       await axios.post("/api/users/invite", { email: inviteEmail }, { headers });
-      flash(`Invite sent to ${inviteEmail}.`);
+      flash("Invite sent to " + inviteEmail);
       setShowInviteModal(false);
       setInviteEmail("");
-    } catch (err) {
-      flash(err.response?.data?.error || "Failed to send invite.");
+    } catch { flash("Error sending invite"); }
+    setSaving(false);
+  };
+
+  const saveCoupon = async () => {
+    if (!couponForm.code || !couponForm.discount_percent || !couponForm.expiry_date) {
+      flash("Please fill all fields");
+      return;
+    }
+    setSaving(true);
+    try {
+      const headers = await authHeaders();
+      await axios.post("/api/coupons", couponForm, { headers });
+      flash("Coupon created!");
+      setShowCouponModal(false);
+      setCouponForm({ code: "", discount_percent: "", expiry_date: "" });
+      loadCoupons();
+    } catch {
+      flash("Error saving coupon");
     }
     setSaving(false);
+  };
+
+  const deleteCoupon = async (id) => {
+    if (!window.confirm("Delete this coupon?")) return;
+    try {
+      const headers = await authHeaders();
+      await axios.delete(`/api/coupons/${id}`, { headers });
+      flash("Coupon deleted");
+      loadCoupons();
+    } catch { flash("Error deleting coupon"); }
   };
 
   const tabs = [
@@ -242,6 +295,8 @@ export default function AdminPage() {
     { key: "events",       label: "Events",       count: events.length },
     { key: "applications", label: "Applications", count: applications.length },
     { key: "users",        label: "Users",        count: users.length },
+    { key: "banners",      label: "Banners",      count: banners.length },
+    { key: "coupons",      label: "Coupons",      count: coupons.length },
   ];
 
   return (
@@ -253,7 +308,7 @@ export default function AdminPage() {
 
         {msg && (
           <div style={{
-            background: "var(--dark)", color: "white", padding: "10px 20px",
+            background: "var(--primary)", color: "white", padding: "10px 20px",
             borderRadius: 8, marginBottom: 16, display: "inline-block", fontSize: "0.9rem",
           }}>
             {msg}
@@ -293,73 +348,56 @@ export default function AdminPage() {
           });
           return (
             <div>
-              {/* Toolbar */}
-              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20, flexWrap: "wrap" }}>
-                <input
-                  type="text"
-                  placeholder="Search by name or ID…"
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  style={{ ...inputStyle, width: 260, flex: "0 0 auto" }}
-                />
-                <select
-                  value={productCategory}
-                  onChange={(e) => setProductCategory(e.target.value)}
-                  style={{ ...inputStyle, width: 160, flex: "0 0 auto" }}
-                >
-                  <option value="All">All Categories</option>
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-                </select>
-                <span style={{ color: "var(--gray)", fontSize: "0.85rem", flex: 1 }}>
-                  {filtered.length} of {products.length} products
-                </span>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, gap: 16, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <select
+                    style={{ ...inputStyle, width: 180 }}
+                    value={productCategory}
+                    onChange={(e) => setProductCategory(e.target.value)}
+                  >
+                    <option value="All">All Categories</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                    style={{ ...inputStyle, width: 240 }}
+                    placeholder="Search name or ID..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                  />
+                </div>
                 <button className="btn btn-primary" onClick={openAddProduct}>+ Add Product</button>
               </div>
 
               <div style={{ overflowX: "auto" }}>
-                <table style={{
-                  width: "100%", borderCollapse: "collapse", background: "white",
-                  borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--card-bg)", borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
                   <thead>
-                    <tr style={{ background: "var(--dark)", color: "white" }}>
-                      {["Image", "Product ID", "Name", "Category", "Price", "Stock", "Featured", "Actions"].map((h) => (
-                        <th key={h} style={thStyle}>{h}</th>
-                      ))}
+                    <tr style={{ background: "var(--primary)", color: "white" }}>
+                      <th style={thStyle}>Product</th>
+                      <th style={thStyle}>Category</th>
+                      <th style={thStyle}>Price</th>
+                      <th style={thStyle}>Stock</th>
+                      <th style={thStyle}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 && (
-                      <tr>
-                        <td colSpan={8} style={{ ...tdStyle, textAlign: "center", color: "var(--gray)", padding: 32 }}>
-                          No products match your search.
-                        </td>
-                      </tr>
-                    )}
-                    {filtered.map((p, i) => (
-                      <tr key={p._id} style={{ background: i % 2 === 0 ? "#f9f9f9" : "white" }}>
+                    {filtered.map((p) => (
+                      <tr key={p._id}>
                         <td style={tdStyle}>
-                          <img src={p.image} alt={p.name} style={{ width: 48, height: 48, objectFit: "cover", borderRadius: 6 }} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <img src={p.image} alt={p.name} style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover" }} />
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{p.name}</div>
+                              <div style={{ fontSize: "0.75rem", color: "var(--gray)" }}>ID: {p._id}</div>
+                            </div>
+                          </div>
                         </td>
-                        <td style={{ ...tdStyle, fontFamily: "monospace", fontSize: "0.78rem", color: "var(--gray)", maxWidth: 120 }}>
-                          <span title={p._id}>{p._id.slice(0, 8)}…</span>
-                        </td>
-                        <td style={{ ...tdStyle, fontWeight: 600, maxWidth: 200 }}>{p.name}</td>
+                        <td style={tdStyle}>{p.category}</td>
+                        <td style={tdStyle}>₹{p.price}</td>
                         <td style={tdStyle}>
-                          <span style={{
-                            padding: "3px 10px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 600,
-                            background: "#f0f4ff", color: "var(--primary)",
-                          }}>
-                            {p.category}
+                          <span style={{ color: p.inStock ? "var(--success)" : "#e53e3e", fontWeight: 600 }}>
+                            {p.inStock ? "In Stock" : "Out of Stock"}
                           </span>
                         </td>
-                        <td style={tdStyle}>₹{p.price.toFixed(2)}</td>
-                        <td style={tdStyle}>
-                          <span style={{ color: p.inStock ? "var(--success)" : "#e53e3e", fontWeight: 700 }}>
-                            {p.inStock ? "✓" : "✗"}
-                          </span>
-                        </td>
-                        <td style={tdStyle}>{p.featured ? "★" : "—"}</td>
                         <td style={tdStyle}>
                           <button
                             onClick={() => openEditProduct(p)}
@@ -397,7 +435,7 @@ export default function AdminPage() {
                 <div
                   key={ev._id}
                   style={{
-                    background: "white", borderRadius: 12, padding: "24px 28px",
+                    background: "var(--card-bg)", borderRadius: 12, padding: "24px 28px",
                     boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
                     display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16,
                   }}
@@ -410,7 +448,7 @@ export default function AdminPage() {
                       📍 {ev.location} &nbsp;·&nbsp;
                       📅 {new Date(ev.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                     </p>
-                    <p style={{ fontSize: "0.9rem", color: "#555", maxWidth: 600 }}>{ev.description}</p>
+                    <p style={{ fontSize: "0.9rem", color: "var(--text-muted)", maxWidth: 600 }}>{ev.description}</p>
                     {ev.applicationLink && (
                       <a
                         href={ev.applicationLink}
@@ -446,11 +484,11 @@ export default function AdminPage() {
         {tab === "applications" && (
           <div style={{ overflowX: "auto" }}>
             <table style={{
-              width: "100%", borderCollapse: "collapse", background: "white",
+              width: "100%", borderCollapse: "collapse", background: "var(--card-bg)",
               borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             }}>
               <thead>
-                <tr style={{ background: "var(--dark)", color: "white" }}>
+                <tr style={{ background: "var(--primary)", color: "white" }}>
                   {["Applicant", "Email", "Event", "Event Date", "Message", "Applied On"].map((h) => (
                     <th key={h} style={thStyle}>{h}</th>
                   ))}
@@ -465,14 +503,14 @@ export default function AdminPage() {
                   </tr>
                 )}
                 {applications.map((a, i) => (
-                  <tr key={a._id} style={{ background: i % 2 === 0 ? "#f9f9f9" : "white" }}>
+                  <tr key={a._id} style={{ background: i % 2 === 0 ? "var(--bg-alt)" : "var(--card-bg)" }}>
                     <td style={{ ...tdStyle, fontWeight: 600 }}>{a.name}</td>
                     <td style={tdStyle}>{a.email}</td>
                     <td style={tdStyle}>{a.event?.name || "—"}</td>
                     <td style={tdStyle}>
                       {a.event?.date ? new Date(a.event.date).toLocaleDateString("en-GB") : "—"}
                     </td>
-                    <td style={{ ...tdStyle, maxWidth: 260, color: "#555" }}>{a.message || "—"}</td>
+                    <td style={{ ...tdStyle, maxWidth: 260, color: "var(--text-muted)" }}>{a.message || "—"}</td>
                     <td style={tdStyle}>{new Date(a.createdAt).toLocaleDateString("en-GB")}</td>
                   </tr>
                 ))}
@@ -489,42 +527,22 @@ export default function AdminPage() {
             </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{
-                width: "100%", borderCollapse: "collapse", background: "white",
+                width: "100%", borderCollapse: "collapse", background: "var(--card-bg)",
                 borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
               }}>
                 <thead>
-                  <tr style={{ background: "var(--dark)", color: "white" }}>
-                    {["User", "Email", "Role", "Joined", "Actions"].map((h) => (
-                      <th key={h} style={thStyle}>{h}</th>
-                    ))}
+                  <tr style={{ background: "var(--primary)", color: "white" }}>
+                    <th style={thStyle}>User</th>
+                    <th style={thStyle}>Email</th>
+                    <th style={thStyle}>Role</th>
+                    <th style={thStyle}>Joined</th>
+                    <th style={thStyle}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.length === 0 && (
-                    <tr>
-                      <td colSpan={5} style={{ ...tdStyle, textAlign: "center", color: "var(--gray)", padding: 32 }}>
-                        No users found.
-                      </td>
-                    </tr>
-                  )}
-                  {users.map((u, i) => (
-                    <tr key={u.id} style={{ background: i % 2 === 0 ? "#f9f9f9" : "white" }}>
-                      <td style={tdStyle}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {u.avatarUrl ? (
-                            <img src={u.avatarUrl} alt={u.name} style={{ width: 34, height: 34, borderRadius: "50%", objectFit: "cover" }} />
-                          ) : (
-                            <div style={{
-                              width: 34, height: 34, borderRadius: "50%", background: "var(--primary)",
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              color: "white", fontWeight: 700, fontSize: "0.9rem",
-                            }}>
-                              {(u.name || u.email)?.[0]?.toUpperCase()}
-                            </div>
-                          )}
-                          <span style={{ fontWeight: 600 }}>{u.name || "—"}</span>
-                        </div>
-                      </td>
+                  {users.map((u) => (
+                    <tr key={u._id}>
+                      <td style={tdStyle}>{u.name}</td>
                       <td style={tdStyle}>{u.email}</td>
                       <td style={tdStyle}>
                         <span style={{
@@ -552,6 +570,204 @@ export default function AdminPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Coupons Tab ── */}
+        {tab === "coupons" && (
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+              <div>
+                <h2 style={{ fontFamily: "Outfit", fontWeight: 800, color: "var(--dark)", fontSize: "1.8rem" }}>Coupons</h2>
+                <p style={{ color: "var(--gray)", fontSize: "0.9rem" }}>Manage discount codes for your customers.</p>
+              </div>
+              <button onClick={() => setShowCouponModal(true)} className="btn btn-primary">+ Add Coupon</button>
+            </div>
+
+            <div style={{ background: "var(--card-bg)", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", border: "1px solid var(--border)" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: "var(--primary)", color: "white" }}>
+                    <th style={thStyle}>Code</th>
+                    <th style={thStyle}>Discount</th>
+                    <th style={thStyle}>Expiry</th>
+                    <th style={thStyle}>Status</th>
+                    <th style={thStyle}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {coupons.map((c) => (
+                    <tr key={c.id}>
+                      <td style={tdStyle}><span style={{ fontWeight: 800, letterSpacing: 1 }}>{c.code}</span></td>
+                      <td style={tdStyle}>{c.discount_percent}% OFF</td>
+                      <td style={tdStyle}>{new Date(c.expiry_date).toLocaleDateString()}</td>
+                      <td style={tdStyle}>
+                        <span style={{ 
+                          padding: "4px 10px", borderRadius: 20, fontSize: "0.75rem", fontWeight: 700,
+                          background: new Date(c.expiry_date) > new Date() ? "#dcfce7" : "#fee2e2",
+                          color: new Date(c.expiry_date) > new Date() ? "#166534" : "#991b1b"
+                        }}>
+                          {new Date(c.expiry_date) > new Date() ? "ACTIVE" : "EXPIRED"}
+                        </span>
+                      </td>
+                      <td style={tdStyle}>
+                        <button onClick={() => deleteCoupon(c.id)} style={{ ...actionBtn, background: "#fee2e2", color: "#991b1b" }}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                  {coupons.length === 0 && (
+                    <tr><td colSpan="5" style={{ padding: 40, textAlign: "center", color: "var(--gray)" }}>No coupons created yet.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ── Banners Tab ── */}
+        {tab === "banners" && (
+          <div>
+            <p style={{ color: "var(--gray)", marginBottom: 24 }}>
+              Manage hero banners for Category pages and images for product badges.
+            </p>
+            
+            <h3 style={{ fontFamily: "Outfit", fontWeight: 700, marginBottom: 16, color: "var(--dark)" }}>Category Hero Banners</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24, marginBottom: 48 }}>
+              {CATEGORIES.map((catName) => {
+                const b = banners.find(bn => bn.name === catName);
+                return (
+                  <div key={catName} style={{ 
+                    background: "var(--card-bg)", borderRadius: 16, padding: 24, 
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid var(--border)" 
+                  }}>
+                    <h4 style={{ fontFamily: "Outfit", fontWeight: 800, marginBottom: 12, textTransform: "uppercase", fontSize: "0.9rem", color: "var(--text)" }}>
+                      {catName}
+                    </h4>
+                    <div style={{ marginBottom: 16, height: 100, background: "var(--gray-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {b?.image_url ? (
+                        <img src={b.image_url} alt={catName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ color: "#ccc", fontSize: "0.8rem" }}>No banner image</span>
+                      )}
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={labelStyle}>Banner URL</label>
+                      <input 
+                        style={inputStyle} 
+                        value={b?.image_url || ""} 
+                        onChange={async (e) => {
+                          const newUrl = e.target.value;
+                          const headers = await authHeaders();
+                          try {
+                            if (b) {
+                              await axios.put(`/api/banners/${b.id}`, { image_url: newUrl }, { headers });
+                            } else {
+                              await axios.post("/api/banners", { name: catName, image_url: newUrl }, { headers });
+                            }
+                            loadBanners();
+                          } catch (err) {
+                            flash("Failed to update banner.");
+                          }
+                        }}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <h3 style={{ fontFamily: "Outfit", fontWeight: 700, marginBottom: 16, color: "var(--dark)" }}>Theme Hero Banners</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24, marginBottom: 48 }}>
+              {THEMES.map((themeName) => {
+                const b = banners.find(bn => bn.name === themeName);
+                return (
+                  <div key={themeName} style={{ 
+                    background: "var(--card-bg)", borderRadius: 16, padding: 24, 
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid var(--border)" 
+                  }}>
+                    <h4 style={{ fontFamily: "Outfit", fontWeight: 800, marginBottom: 12, textTransform: "uppercase", fontSize: "0.9rem", color: "var(--text)" }}>
+                      {themeName}
+                    </h4>
+                    <div style={{ marginBottom: 16, height: 100, background: "var(--gray-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {b?.image_url ? (
+                        <img src={b.image_url} alt={themeName} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <span style={{ color: "#ccc", fontSize: "0.8rem" }}>No banner image</span>
+                      )}
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={labelStyle}>Banner URL</label>
+                      <input 
+                        style={inputStyle} 
+                        value={b?.image_url || ""} 
+                        onChange={async (e) => {
+                          const newUrl = e.target.value;
+                          const headers = await authHeaders();
+                          try {
+                            if (b) {
+                              await axios.put(`/api/banners/${b.id}`, { image_url: newUrl }, { headers });
+                            } else {
+                              await axios.post("/api/banners", { name: themeName, image_url: newUrl }, { headers });
+                            }
+                            loadBanners();
+                          } catch (err) {
+                            flash("Failed to update theme banner.");
+                          }
+                        }}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <h3 style={{ fontFamily: "Outfit", fontWeight: 700, marginBottom: 16, color: "var(--dark)" }}>Product Badge Images</h3>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+              {BADGE_OPTIONS.map((badgeName) => {
+                const b = banners.find(bn => bn.name === badgeName);
+                return (
+                  <div key={badgeName} style={{ 
+                    background: "var(--card-bg)", borderRadius: 16, padding: 24, 
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)", border: "1px solid var(--border)" 
+                  }}>
+                    <h4 style={{ fontFamily: "Outfit", fontWeight: 800, marginBottom: 12, textTransform: "uppercase", fontSize: "0.9rem", color: "var(--text)" }}>
+                      {badgeName}
+                    </h4>
+                    <div style={{ marginBottom: 16, height: 80, background: "var(--gray-light)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {b?.image_url ? (
+                        <img src={b.image_url} alt={badgeName} style={{ height: "100%", objectFit: "contain" }} />
+                      ) : (
+                        <span style={{ color: "#ccc", fontSize: "0.8rem" }}>No badge image</span>
+                      )}
+                    </div>
+                    <div style={fieldWrap}>
+                      <label style={labelStyle}>Badge Image URL</label>
+                      <input 
+                        style={inputStyle} 
+                        value={b?.image_url || ""} 
+                        onChange={async (e) => {
+                          const newUrl = e.target.value;
+                          const headers = await authHeaders();
+                          try {
+                            if (b) {
+                              await axios.put(`/api/banners/${b.id}`, { image_url: newUrl }, { headers });
+                            } else {
+                              await axios.post("/api/banners", { name: badgeName, image_url: newUrl }, { headers });
+                            }
+                            loadBanners();
+                          } catch (err) {
+                            flash("Failed to update badge image.");
+                          }
+                        }}
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -588,42 +804,48 @@ export default function AdminPage() {
                   value={productForm.category}
                   onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))}
                 >
-                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div style={fieldWrap}>
-                <label style={labelStyle}>Price (₹) *</label>
+                <label style={labelStyle}>Theme</label>
+                <select
+                  style={inputStyle}
+                  value={productForm.theme}
+                  onChange={(e) => setProductForm((f) => ({ ...f, theme: e.target.value }))}
+                >
+                  <option value="">None</option>
+                  {THEMES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Current Price *</label>
                 <input
-                  style={inputStyle} type="number" step="0.01" min="0"
+                  style={inputStyle}
+                  type="number"
                   value={productForm.price}
                   onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
-                  placeholder="9.99"
+                  placeholder="e.g. 299"
                 />
               </div>
               <div style={fieldWrap}>
-                <label style={labelStyle}>Original Price (₹)</label>
+                <label style={labelStyle}>Original Price (for discount)</label>
                 <input
-                  style={inputStyle} type="number" step="0.01" min="0"
+                  style={inputStyle}
+                  type="number"
                   value={productForm.originalPrice}
                   onChange={(e) => setProductForm((f) => ({ ...f, originalPrice: e.target.value }))}
-                  placeholder="14.99"
+                  placeholder="e.g. 499"
                 />
               </div>
-              <div style={{ ...fieldWrap, gridColumn: "span 2" }}>
-                <label style={labelStyle}>Image URL *</label>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Main Image URL *</label>
                 <input
                   style={inputStyle}
                   value={productForm.image}
                   onChange={(e) => setProductForm((f) => ({ ...f, image: e.target.value }))}
                   placeholder="https://..."
                 />
-                <div style={{ marginTop: 10 }}>
-                  <label style={{ fontSize: "0.78rem", color: "var(--gray)", marginBottom: 4, display: "block" }}>
-                    Or upload to Cloudinary:
-                  </label>
-                  <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} />
-                  {uploading && <span style={{ color: "var(--primary)", fontSize: "0.8rem", marginLeft: 8 }}>Uploading…</span>}
-                </div>
                 {productForm.image && (
                   <img
                     src={productForm.image} alt="preview"
@@ -675,21 +897,19 @@ export default function AdminPage() {
                     type="checkbox"
                     checked={productForm.inStock}
                     onChange={(e) => setProductForm((f) => ({ ...f, inStock: e.target.checked }))}
-                  />
-                  In Stock
+                  /> In Stock
                 </label>
                 <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600, fontSize: "0.9rem" }}>
                   <input
                     type="checkbox"
                     checked={productForm.featured}
                     onChange={(e) => setProductForm((f) => ({ ...f, featured: e.target.checked }))}
-                  />
-                  Featured
+                  /> Featured
                 </label>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 28 }}>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 32 }}>
               <button
                 onClick={() => setShowProductModal(false)}
                 style={{ ...actionBtn, background: "#eee", color: "#333", padding: "10px 24px" }}
@@ -729,44 +949,44 @@ export default function AdminPage() {
                 />
               </div>
               <div style={fieldWrap}>
-                <label style={labelStyle}>Location *</label>
+                <label style={labelStyle}>Date *</label>
                 <input
                   style={inputStyle}
-                  value={eventForm.location}
-                  onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))}
-                  placeholder="City, Venue"
-                />
-              </div>
-              <div style={fieldWrap}>
-                <label style={labelStyle}>Date & Time *</label>
-                <input
-                  style={inputStyle}
-                  type="datetime-local"
+                  type="date"
                   value={eventForm.date}
                   onChange={(e) => setEventForm((f) => ({ ...f, date: e.target.value }))}
                 />
               </div>
               <div style={fieldWrap}>
-                <label style={labelStyle}>Description *</label>
-                <textarea
-                  style={{ ...inputStyle, height: 100, resize: "vertical" }}
-                  value={eventForm.description}
-                  onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Event description…"
+                <label style={labelStyle}>Location *</label>
+                <input
+                  style={inputStyle}
+                  value={eventForm.location}
+                  onChange={(e) => setEventForm((f) => ({ ...f, location: e.target.value }))}
+                  placeholder="City, State"
                 />
               </div>
               <div style={fieldWrap}>
-                <label style={labelStyle}>External Application Link (optional)</label>
+                <label style={labelStyle}>Description</label>
+                <textarea
+                  style={{ ...inputStyle, height: 80 }}
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Event details…"
+                />
+              </div>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Application Link (Optional)</label>
                 <input
                   style={inputStyle}
                   value={eventForm.applicationLink}
                   onChange={(e) => setEventForm((f) => ({ ...f, applicationLink: e.target.value }))}
-                  placeholder="https://forms.google.com/…"
+                  placeholder="https://google-form-link"
                 />
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 28 }}>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 32 }}>
               <button
                 onClick={() => setShowEventModal(false)}
                 style={{ ...actionBtn, background: "#eee", color: "#333", padding: "10px 24px" }}
@@ -774,24 +994,23 @@ export default function AdminPage() {
                 Cancel
               </button>
               <button className="btn btn-primary" onClick={saveEvent} disabled={saving}>
-                {saving ? "Saving…" : editingEvent ? "Update Event" : "Create Event"}
+                {saving ? "Saving…" : editingEvent ? "Update Event" : "Add Event"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Invite User Modal ── */}
+      {/* ── Invite Modal ── */}
       {showInviteModal && (
         <div style={overlayStyle} onClick={() => setShowInviteModal(false)}>
-          <div style={{ ...modalStyle, maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "Outfit", fontWeight: 800, color: "var(--dark)" }}>Invite User</h2>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                style={{ background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer" }}
-              >✕</button>
-            </div>
+          <div style={{ ...modalStyle, maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontFamily: "Outfit", fontWeight: 800, color: "var(--dark)", marginBottom: 12 }}>
+              Invite Admin
+            </h2>
+            <p style={{ color: "var(--gray)", fontSize: "0.9rem", marginBottom: 24 }}>
+              Enter the email address of the person you want to invite as an admin. They will receive an invitation link.
+            </p>
             <div style={fieldWrap}>
               <label style={labelStyle}>Email Address</label>
               <input
@@ -799,12 +1018,9 @@ export default function AdminPage() {
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="user@example.com"
+                placeholder="admin@akaraboutique.com"
               />
             </div>
-            <p style={{ fontSize: "0.82rem", color: "var(--gray)", marginTop: 10 }}>
-              An invitation email will be sent. The user can set their password via the link.
-            </p>
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24 }}>
               <button
                 onClick={() => setShowInviteModal(false)}
@@ -814,6 +1030,56 @@ export default function AdminPage() {
               </button>
               <button className="btn btn-primary" onClick={sendInvite} disabled={saving || !inviteEmail}>
                 {saving ? "Sending…" : "Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coupon Modal ── */}
+      {showCouponModal && (
+        <div style={overlayStyle} onClick={() => setShowCouponModal(false)}>
+          <div style={{ ...modalStyle, maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontFamily: "Outfit", fontWeight: 800, color: "var(--dark)", marginBottom: 24 }}>Add Coupon</h2>
+            <div style={{ display: "grid", gap: 16 }}>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Coupon Code</label>
+                <input
+                  style={inputStyle}
+                  value={couponForm.code}
+                  onChange={(e) => setCouponForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))}
+                  placeholder="E.g. SUMMER20"
+                />
+              </div>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Discount Percent (%)</label>
+                <input
+                  style={inputStyle}
+                  type="number"
+                  value={couponForm.discount_percent}
+                  onChange={(e) => setCouponForm((f) => ({ ...f, discount_percent: e.target.value }))}
+                  placeholder="20"
+                />
+              </div>
+              <div style={fieldWrap}>
+                <label style={labelStyle}>Expiry Date</label>
+                <input
+                  style={inputStyle}
+                  type="date"
+                  value={couponForm.expiry_date}
+                  onChange={(e) => setCouponForm((f) => ({ ...f, expiry_date: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 32 }}>
+              <button
+                onClick={() => setShowCouponModal(false)}
+                style={{ ...actionBtn, background: "var(--gray-light)", color: "var(--text)", padding: "10px 24px" }}
+              >
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={saveCoupon} disabled={saving}>
+                {saving ? "Creating…" : "Create Coupon"}
               </button>
             </div>
           </div>

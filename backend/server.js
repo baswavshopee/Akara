@@ -9,6 +9,8 @@ const eventRoutes = require("./routes/eventRoutes");
 const userRoutes = require("./routes/userRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const bannerRoutes = require("./routes/bannerRoutes");
+const couponRoutes = require("./routes/couponRoutes");
 const supabase = require("./config/supabase");
 
 const app = express();
@@ -18,11 +20,13 @@ app.use(express.json());
 
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/banners", bannerRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/coupons", couponRoutes);
 
 app.get("/", (req, res) => res.json({ message: "Akara API running" }));
 

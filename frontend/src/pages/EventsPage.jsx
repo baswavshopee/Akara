@@ -8,16 +8,18 @@ const overlayStyle = {
   zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
 };
 const modalStyle = {
-  background: "white", borderRadius: 16, padding: 32, maxWidth: 480,
+  background: "var(--card-bg)", borderRadius: 16, padding: 32, maxWidth: 480,
   width: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+  color: "var(--text)"
 };
 const fieldLabel = {
   fontSize: "0.8rem", fontWeight: 600, color: "var(--dark)", marginBottom: 6,
   display: "block", textTransform: "uppercase", letterSpacing: 0.5,
 };
 const fieldInput = {
-  padding: "10px 14px", border: "1.5px solid #ddd", borderRadius: 8,
+  padding: "10px 14px", border: "1.5px solid var(--border)", borderRadius: 8,
   fontSize: "0.95rem", width: "100%", fontFamily: "Inter, sans-serif",
+  background: "var(--bg)", color: "var(--text)"
 };
 
 export default function EventsPage() {
@@ -82,10 +84,11 @@ export default function EventsPage() {
               <div
                 key={ev._id}
                 style={{
-                  background: "white", borderRadius: 16, padding: "32px 36px",
-                  boxShadow: "0 8px 32px rgba(27,75,69,0.1)",
+                  background: "var(--card-bg)", borderRadius: 16, padding: "32px 36px",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
                   display: "flex", justifyContent: "space-between",
                   alignItems: "flex-start", gap: 32,
+                  border: "1px solid var(--border)"
                 }}
               >
                 <div style={{ flex: 1 }}>
@@ -116,7 +119,7 @@ export default function EventsPage() {
                   <p style={{ color: "var(--gray)", marginBottom: 12, fontSize: "0.9rem" }}>
                     📍 {ev.location}
                   </p>
-                  <p style={{ color: "#444", lineHeight: 1.7, maxWidth: 600 }}>{ev.description}</p>
+                  <p style={{ color: "var(--text)", opacity: 0.8, lineHeight: 1.7, maxWidth: 600 }}>{ev.description}</p>
                 </div>
                 <div style={{ flexShrink: 0 }}>
                   <button className="btn btn-primary" onClick={() => openApply(ev)}>
@@ -127,6 +130,31 @@ export default function EventsPage() {
             ))}
           </div>
         )}
+
+        {/* Event Management CTA */}
+        <div style={{
+          marginTop: 64,
+          background: "linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%)",
+          borderRadius: 24,
+          padding: "48px 40px",
+          textAlign: "center",
+          color: "white",
+          boxShadow: "0 20px 40px rgba(var(--primary-rgb), 0.2)"
+        }}>
+          <h2 style={{ fontFamily: "Outfit", fontSize: "2rem", fontWeight: 800, marginBottom: 16 }}>
+            Want Akara to manage your entire event?
+          </h2>
+          <p style={{ fontSize: "1.1rem", opacity: 0.9, marginBottom: 32, maxWidth: 600, marginInline: "auto" }}>
+            From curation to execution, we bring premium identity and artistry to your corporate or private gatherings.
+          </p>
+          <button 
+            className="btn btn-white-pill" 
+            onClick={() => window.location.href = "mailto:hello@akarakeepsakes.com"}
+            style={{ padding: "16px 40px", background: "white", color: "var(--primary)", border: "none", borderRadius: 50, fontWeight: 700, cursor: "pointer", fontSize: "1rem" }}
+          >
+            Contact Us Now →
+          </button>
+        </div>
       </div>
 
       {applyModal && (
@@ -174,7 +202,7 @@ export default function EventsPage() {
             <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24 }}>
               <button
                 onClick={() => setApplyModal(null)}
-                style={{ padding: "10px 20px", border: "none", borderRadius: 8, background: "#eee", cursor: "pointer", fontWeight: 600 }}
+                style={{ padding: "10px 20px", border: "none", borderRadius: 8, background: "var(--gray-light)", cursor: "pointer", fontWeight: 600, color: "var(--text)" }}
               >
                 Cancel
               </button>

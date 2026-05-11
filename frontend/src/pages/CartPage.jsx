@@ -74,7 +74,7 @@ export default function CartPage() {
 
             {/* Right Column: Order Summary */}
             <div className="cart-order-summary" style={{ background: 'var(--gray-light)', padding: '40px', borderRadius: '0px', position: 'sticky', top: '100px' }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '32px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '2px solid rgba(255,255,255,0.2)', paddingBottom: '16px', color: 'var(--dark)' }}>Order Summary</h3>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '32px', textTransform: 'uppercase', letterSpacing: '1px', borderBottom: '2px solid var(--border)', paddingBottom: '16px', color: 'var(--dark)' }}>Order Summary</h3>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', fontSize: '1.1rem' }}>
                 <span style={{ color: 'var(--dark)' }}>Subtotal</span>
@@ -91,12 +91,12 @@ export default function CartPage() {
                 <span style={{ fontWeight: '700', color: 'var(--dark)' }}>₹{tax.toFixed(2)}</span>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', paddingTop: '24px', borderTop: '2px solid rgba(255,255,255,0.2)', fontSize: '1.4rem', fontWeight: '800' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', paddingTop: '24px', borderTop: '2px solid var(--border)', fontSize: '1.4rem', fontWeight: '800' }}>
                 <span style={{ color: 'var(--dark)' }}>Total</span>
                 <span style={{ color: 'var(--dark)' }}>₹{finalTotal.toFixed(2)}</span>
               </div>
 
-              <button className="btn-checkout" style={{ background: 'var(--dark)', color: 'var(--white)', width: '100%', padding: '20px', fontSize: '1.1rem', textTransform: 'uppercase', letterSpacing: '2px', cursor: 'pointer', border: 'none' }} onClick={() => navigate("/checkout")}>
+              <button className="btn-checkout" style={{ background: 'var(--primary)', color: 'white', width: '100%', padding: '20px', fontSize: '1.1rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px', cursor: 'pointer', border: 'none', borderRadius: '12px', transition: 'all 0.3s ease' }} onClick={() => navigate("/checkout")}>
                 Proceed to Checkout
               </button>
             </div>

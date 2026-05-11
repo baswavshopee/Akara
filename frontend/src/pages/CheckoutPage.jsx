@@ -20,9 +20,14 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponError, setCouponError] = useState("");
+
   const shipping = totalPrice > 0 ? 5.99 : 0;
   const tax = totalPrice * 0.1;
-  const finalTotal = totalPrice + tax + shipping;
+  const discount = appliedCoupon ? (totalPrice * appliedCoupon.discount_percent) / 100 : 0;
+  const finalTotal = totalPrice + tax + shipping - discount;
 
   // Dynamically load Razorpay script
   useEffect(() => {
@@ -64,6 +69,19 @@ export default function CheckoutPage() {
   function handleChange(e) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+  }
+
+  async function handleApplyCoupon() {
+    if (!couponCode.trim()) return;
+    setCouponError("");
+    try {
+      const { data } = await axios.post("/api/coupons/validate", { code: couponCode });
+      setAppliedCoupon(data);
+      setCouponCode("");
+    } catch (err) {
+      setCouponError(err.response?.data?.error || "Invalid coupon code");
+      setAppliedCoupon(null);
+    }
   }
 
   async function handleSubmit(e) {
@@ -118,7 +136,9 @@ export default function CheckoutPage() {
               tax,
               total: finalTotal,
               paymentId: response.razorpay_payment_id,
-              paymentStatus: "paid"
+              paymentStatus: "paid",
+              couponUsed: appliedCoupon ? appliedCoupon.code : null,
+              discountAmount: discount
             });
 
             clearCart();
@@ -158,12 +178,12 @@ export default function CheckoutPage() {
   const inputStyle = (field) => ({
     width: "100%",
     padding: "14px 16px",
-    border: `1px solid ${errors[field] ? "#e53e3e" : "var(--gray-light)"}`,
+    border: `1px solid ${errors[field] ? "#e53e3e" : "var(--border)"}`,
     borderRadius: "0",
     fontSize: "1rem",
     outline: "none",
-    background: "var(--white)",
-    color: "var(--dark)",
+    background: "var(--bg)",
+    color: "var(--text)",
     boxSizing: "border-box",
   });
 
@@ -243,8 +263,8 @@ export default function CheckoutPage() {
               type="submit"
               disabled={isProcessing}
               style={{
-                background: "var(--dark)",
-                color: "#fff",
+                background: "var(--primary)",
+                color: "white",
                 border: "none",
                 width: "100%",
                 padding: "20px",
@@ -258,6 +278,8 @@ export default function CheckoutPage() {
                 justifyContent: "center",
                 gap: "12px",
                 opacity: isProcessing ? 0.7 : 1,
+                borderRadius: "12px",
+                transition: "all 0.3s ease"
               }}
             >
               {isProcessing ? "Processing..." : "Pay & Place Order"}
@@ -269,8 +291,8 @@ export default function CheckoutPage() {
           </form>
 
           {/* Right: Order Summary */}
-          <div style={{ background: "var(--gray-light)", padding: "40px", position: "sticky", top: "100px" }}>
-            <h2 style={{ fontSize: "1.3rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "28px", paddingBottom: "16px", borderBottom: "2px solid rgba(0,0,0,0.1)", color: "var(--dark)" }}>
+          <div style={{ background: "var(--gray-light)", padding: "40px", position: "sticky", top: "100px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+            <h2 style={{ fontSize: "1.3rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "28px", paddingBottom: "16px", borderBottom: "2px solid var(--border)", color: "var(--dark)" }}>
               Order Summary
             </h2>
 
@@ -287,19 +309,45 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <div style={{ borderTop: "1px solid rgba(0,0,0,0.1)", paddingTop: "20px" }}>
+            {/* Coupon Section */}
+            <div style={{ marginBottom: "24px", padding: "20px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <input 
+                  placeholder="Coupon Code" 
+                  value={couponCode} 
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  style={{ ...inputStyle(""), padding: "10px 12px", fontSize: "0.9rem", flex: 1 }}
+                />
+                <button 
+                  type="button" 
+                  onClick={handleApplyCoupon}
+                  style={{ background: "var(--dark)", color: "white", border: "none", padding: "0 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", textTransform: "uppercase" }}
+                >
+                  Apply
+                </button>
+              </div>
+              {couponError && <p style={{ color: "#e53e3e", fontSize: "0.75rem", marginTop: "8px", fontWeight: 600 }}>{couponError}</p>}
+              {appliedCoupon && (
+                <div style={{ marginTop: "12px", background: "rgba(16,185,129,0.1)", color: "#059669", padding: "8px 12px", borderRadius: "4px", fontSize: "0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>Code <b>{appliedCoupon.code}</b> applied!</span>
+                  <button onClick={() => setAppliedCoupon(null)} style={{ background: "none", border: "none", color: "#059669", cursor: "pointer", fontWeight: 800 }}>✕</button>
+                </div>
+              )}
+            </div>
+
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
               {[
                 { label: "Subtotal", value: `₹${totalPrice.toFixed(2)}` },
                 { label: "Shipping", value: `₹${shipping.toFixed(2)}` },
                 { label: "Tax (10%)", value: `₹${tax.toFixed(2)}` },
-              ].map(({ label, value }) => (
+                ...(appliedCoupon ? [{ label: `Discount (${appliedCoupon.discount_percent}%)`, value: `-₹${discount.toFixed(2)}`, color: "#059669" }] : []),
+              ].map(({ label, value, color }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "1rem" }}>
                   <span style={{ color: "var(--dark)" }}>{label}</span>
-                  <span style={{ fontWeight: "700", color: "var(--dark)" }}>{value}</span>
+                  <span style={{ fontWeight: "700", color: color || "var(--dark)" }}>{value}</span>
                 </div>
               ))}
-
-              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "16px", borderTop: "2px solid rgba(0,0,0,0.15)", fontSize: "1.3rem", fontWeight: "800" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", paddingTop: "16px", borderTop: "2px solid var(--border)", fontSize: "1.3rem", fontWeight: "800" }}>
                 <span style={{ color: "var(--dark)" }}>Total</span>
                 <span style={{ color: "var(--dark)" }}>₹{finalTotal.toFixed(2)}</span>
               </div>

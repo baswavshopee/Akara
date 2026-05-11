@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
+import { useBanners } from "../context/BannerContext";
 import Stars from "./Stars";
 
 export default function ProductCard({ product }) {
@@ -10,6 +11,7 @@ export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const { user } = useAuth();
+  const banners = useBanners();
   const [wished, setWished] = useState(false);
 
   const discount = product.originalPrice
@@ -22,6 +24,8 @@ export default function ProductCard({ product }) {
     New: "badge-new",
     Popular: "badge-popular",
   }[product.badge] || "badge-new";
+
+  const bannerImg = banners && banners[product.badge];
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
@@ -39,7 +43,20 @@ export default function ProductCard({ product }) {
       <div className="product-img-wrap">
         <img src={product.image} alt={product.name} loading="lazy" />
         {product.badge && (
-          <span className={`product-badge ${badgeClass}`}>{product.badge}</span>
+          <div className={`product-badge ${badgeClass}`} style={{ 
+            background: bannerImg ? 'transparent' : 'white',
+            padding: bannerImg ? 0 : '4px 10px',
+            width: bannerImg ? '60px' : 'auto',
+            height: bannerImg ? '60px' : 'auto',
+            top: bannerImg ? '5px' : '12px',
+            left: bannerImg ? '5px' : '12px',
+          }}>
+            {bannerImg ? (
+              <img src={bannerImg} alt={product.badge} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              product.badge
+            )}
+          </div>
         )}
         {!product.inStock && (
           <div className="out-of-stock-label">Out of Stock</div>

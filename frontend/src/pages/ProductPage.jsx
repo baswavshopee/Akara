@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useBanners } from "../context/BannerContext";
 import Stars from "../components/Stars";
 import ProductCard from "../components/ProductCard";
 import Spinner from "../components/Spinner";
@@ -14,6 +15,7 @@ export default function ProductPage() {
   const { addToCart } = useCart();
   const { showToast } = useToast();
   const { user } = useAuth();
+  const banners = useBanners();
 
   const [product, setProduct] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
@@ -24,6 +26,7 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [activeThumb, setActiveThumb] = useState(0);
+  const [isGifting, setIsGifting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -61,6 +64,8 @@ export default function ProductPage() {
     showToast("Added to cart!");
   };
 
+  const bannerImg = product && (product.bannerImage || (banners && banners[product.badge]));
+
   // Use same image 3x as thumbnails (real app would have multiple images)
   const thumbImages = [product.image, product.image, product.image];
 
@@ -73,8 +78,14 @@ export default function ProductPage() {
           <Link to="/">Home</Link>
           <span>›</span>
           <Link to={`/category/${product.category}`}>{product.category}</Link>
+          {product.theme && (
+            <>
+              <span>›</span>
+              <Link to={`/theme/${product.theme}`}>{product.theme}</Link>
+            </>
+          )}
           <span>›</span>
-          <span>{product.name}</span>
+          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{product.name}</span>
         </div>
 
         <Link to={`/category/${product.category}`} className="back-btn">
@@ -106,14 +117,69 @@ export default function ProductPage() {
 
           {/* Info */}
           <div className="product-detail-info">
-            <div className="detail-category">{product.category}</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <Link 
+                  to={`/category/${product.category}`} 
+                  className="detail-category" 
+                  style={{ 
+                    marginBottom: 0, 
+                    textDecoration: 'none',
+                    background: 'var(--bg-alt)',
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    color: 'var(--text)',
+                    fontSize: '0.8rem',
+                    fontWeight: 700
+                  }}
+                >
+                  {product.category}
+                </Link>
+                {product.theme && (
+                  <Link 
+                    to={`/category/${product.category}?theme=${product.theme}`} 
+                    style={{ 
+                      fontSize: '0.8rem', 
+                      fontWeight: 700, 
+                      color: 'white', 
+                      textDecoration: 'none',
+                      background: 'var(--primary)',
+                      padding: '4px 12px',
+                      borderRadius: '6px',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5
+                    }}
+                  >
+                    Theme: {product.theme}
+                  </Link>
+                )}
+              </div>
+              
+              {product.badge && (
+                <div style={{ 
+                  background: bannerImg ? 'transparent' : 'var(--primary)',
+                  padding: bannerImg ? 0 : '4px 12px',
+                  borderRadius: '50px',
+                  color: 'white',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  textTransform: 'uppercase'
+                }}>
+                  {bannerImg ? (
+                    <img src={bannerImg} alt={product.badge} style={{ height: '45px', width: 'auto' }} />
+                  ) : (
+                    product.badge
+                  )}
+                </div>
+              )}
+            </div>
             <h1 className="detail-title">{product.name}</h1>
 
             {/* Rating */}
             <div className="detail-rating">
               <Stars rating={product.rating} />
               <strong>{product.rating}</strong>
-              <span style={{ color: "var(--gray)", fontSize: "0.88rem" }}>
+              <span style={{ color: "var(--text-muted)", fontSize: "0.88rem" }}>
                 ({product.reviews} reviews)
               </span>
               {product.inStock
@@ -133,7 +199,7 @@ export default function ProductPage() {
               )}
             </div>
 
-            <p className="detail-description">{product.description}</p>
+            <p className="detail-description" style={{ color: 'var(--text-muted)' }}>{product.description}</p>
 
             {/* Sizes */}
             {product.sizes?.length > 0 && (
@@ -177,6 +243,53 @@ export default function ProductPage() {
               </div>
             </div>
 
+            {/* Premium Gifting Option */}
+            <div style={{
+              margin: '30px 0',
+              padding: '20px',
+              background: 'var(--bg-alt)',
+              borderRadius: '16px',
+              border: '1px dashed var(--primary)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '1.5rem' }}>🎁</span>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text)' }}>Premium Gift Wrapping</h4>
+                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Handwritten note & signature box (+₹49)</p>
+                  </div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={isGifting} 
+                  onChange={(e) => setIsGifting(e.target.checked)}
+                  style={{ width: '20px', height: '20px', cursor: 'pointer' }}
+                />
+              </div>
+            </div>
+
+            {/* Live Customizer Teaser */}
+            <div 
+              style={{
+                marginBottom: '30px',
+                padding: '16px',
+                background: 'var(--primary)',
+                color: 'white',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer'
+              }}
+              onClick={() => showToast("Customizer loading... Upload your design in the next step!")}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.2rem' }}>🎨</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Try Live Customizer Pre-view</span>
+              </div>
+              <span>→</span>
+            </div>
+
             {/* Actions */}
             <div className="detail-actions">
               <button
@@ -199,7 +312,7 @@ export default function ProductPage() {
               <div className="feature-row"><span className="feature-icon">🚚</span> Free delivery on orders over ₹500</div>
               <div className="feature-row"><span className="feature-icon">↩️</span> Free 30-day returns</div>
               <div className="feature-row"><span className="feature-icon">🔒</span> Secure payment &amp; checkout</div>
-              <div className="feature-row"><span className="feature-icon">🎨</span> Fully customizable designs</div>
+              <div className="feature-row"><span className="feature-icon">✨</span> Handcrafted with Artisan Precision</div>
             </div>
           </div>
         </div>

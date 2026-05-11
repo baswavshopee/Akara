@@ -1,0 +1,47 @@
+/* ========== MARQUEE ANIMATION ========== */
+.promo-marquee-container {
+  overflow: hidden;
+  white-space: nowrap;
+  background: #000000;
+  padding: 8px 0;
+}
+
+.promo-marquee-content {
+  display: inline-block;
+  animation: marquee 30s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ========== FULL SCREEN HERO FIX ========== */
+.carousel-container {
+  height: 100vh !important;
+  margin-top: -120px !important;
+  position: relative;
+  overflow: hidden;
+  background: #121212;
+}
+
+.carousel-slide {
+  height: 100vh !important;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-slide-bg img {
+  height: 100vh !important;
+  width: 100%;
+  object-fit: cover;
+  filter: brightness(0.6);
+}
+
+.hero-main-row {
+  z-index: 2;
+  text-align: center;
+}

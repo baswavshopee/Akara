@@ -13,17 +13,17 @@ const STATUS_COLORS = {
 function StatCard({ label, revenue, orders, accent }) {
   return (
     <div style={{
-      background: "white", borderRadius: 12, padding: "24px 28px",
+      background: "var(--card-bg)", borderRadius: 12, padding: "24px 28px",
       boxShadow: "0 4px 20px rgba(0,0,0,0.07)", borderTop: `4px solid ${accent}`,
       flex: 1, minWidth: 180,
     }}>
-      <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "#888", marginBottom: 12 }}>
+      <div style={{ fontSize: "0.78rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "var(--text-muted)", marginBottom: 12 }}>
         {label}
       </div>
       <div style={{ fontSize: "1.9rem", fontWeight: 800, color: "var(--dark)", lineHeight: 1, marginBottom: 8 }}>
         ₹{revenue.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </div>
-      <div style={{ fontSize: "0.88rem", color: "#888" }}>
+      <div style={{ fontSize: "0.88rem", color: "var(--text-muted)" }}>
         {orders} {orders === 1 ? "order" : "orders"}
       </div>
     </div>
@@ -52,7 +52,7 @@ function RevenueChart({ data, mode, onModeChange }) {
   }));
 
   return (
-    <div style={{ background: "white", borderRadius: 12, padding: "24px 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", marginBottom: 28 }}>
+    <div style={{ background: "var(--card-bg)", borderRadius: 12, padding: "24px 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)", marginBottom: 28 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h3 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "1.1rem", color: "var(--dark)" }}>
           Last 30 Days
@@ -84,7 +84,7 @@ function RevenueChart({ data, mode, onModeChange }) {
           {/* Grid lines + Y labels */}
           {gridLines.map((g, i) => (
             <g key={i}>
-              <line x1={padL} y1={g.y} x2={W - padR} y2={g.y} stroke="#f0f0f0" strokeWidth={1} />
+              <line x1={padL} y1={g.y} x2={W - padR} y2={g.y} stroke="var(--border)" strokeWidth={1} />
               <text x={padL - 6} y={g.y + 4} textAnchor="end" fontSize={9} fill="#aaa" fontFamily="monospace">
                 {mode === "revenue"
                   ? g.val >= 1000 ? `₹${(g.val / 1000).toFixed(1)}k` : `₹${Math.round(g.val)}`
@@ -149,7 +149,7 @@ function RevenueChart({ data, mode, onModeChange }) {
           })}
 
           {/* X-axis baseline */}
-          <line x1={padL} y1={padT + chartH} x2={W - padR} y2={padT + chartH} stroke="#e0e0e0" strokeWidth={1} />
+          <line x1={padL} y1={padT + chartH} x2={W - padR} y2={padT + chartH} stroke="var(--border)" strokeWidth={1} />
         </svg>
       </div>
     </div>
@@ -160,7 +160,7 @@ function TopProducts({ products }) {
   const maxQty = Math.max(...products.map((p) => p.qtySold), 1);
 
   return (
-    <div style={{ background: "white", borderRadius: 12, padding: "24px 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
+    <div style={{ background: "var(--card-bg)", borderRadius: 12, padding: "24px 28px", boxShadow: "0 4px 20px rgba(0,0,0,0.07)" }}>
       <h3 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "1.1rem", color: "var(--dark)", marginBottom: 20 }}>
         Top Selling Products
       </h3>
@@ -198,7 +198,7 @@ function TopProducts({ products }) {
                 </span>
               </div>
               {/* Progress bar */}
-              <div style={{ height: 6, background: "#f0f0f0", borderRadius: 3, overflow: "hidden" }}>
+              <div style={{ height: 6, background: "var(--bg-alt)", borderRadius: 3, overflow: "hidden" }}>
                 <div style={{
                   height: "100%", borderRadius: 3,
                   width: `${(p.qtySold / maxQty) * 100}%`,
@@ -219,7 +219,7 @@ function TopProducts({ products }) {
 
 function RecentOrders({ orders, onStatusChange }) {
   return (
-    <div style={{ background: "white", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.07)", overflow: "hidden" }}>
+    <div style={{ background: "var(--card-bg)", borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.07)", overflow: "hidden" }}>
       <div style={{ padding: "24px 28px 0" }}>
         <h3 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "1.1rem", color: "var(--dark)" }}>
           Recent Orders
@@ -229,7 +229,7 @@ function RecentOrders({ orders, onStatusChange }) {
       <div style={{ overflowX: "auto", marginTop: 16 }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ background: "#fafafa", borderBottom: "2px solid #f0f0f0" }}>
+            <tr style={{ background: "var(--bg-alt)", borderBottom: "2px solid var(--border)" }}>
               {["Customer", "Items", "Total", "Status", "Date", "Action"].map((h) => (
                 <th key={h} style={{
                   padding: "10px 16px", textAlign: "left", fontSize: "0.78rem",
@@ -251,7 +251,7 @@ function RecentOrders({ orders, onStatusChange }) {
             {orders.map((o, i) => {
               const sc = STATUS_COLORS[o.status] || STATUS_COLORS.pending;
               return (
-                <tr key={o._id} style={{ borderBottom: "1px solid #f5f5f5", background: i % 2 === 0 ? "white" : "#fafafa" }}>
+                <tr key={o._id} style={{ borderBottom: "1px solid var(--border)", background: i % 2 === 0 ? "var(--card-bg)" : "var(--bg-alt)" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ fontWeight: 700, fontSize: "0.9rem", color: "var(--dark)" }}>{o.customerName}</div>
                     <div style={{ fontSize: "0.78rem", color: "#888" }}>{o.customerPhone}</div>
@@ -262,7 +262,7 @@ function RecentOrders({ orders, onStatusChange }) {
                         <div key={j} style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <img src={item.image} alt={item.name}
                             style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4 }} />
-                          <span style={{ fontSize: "0.75rem", color: "#555" }}>×{item.qty}</span>
+                          <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>×{item.qty}</span>
                         </div>
                       ))}
                       {o.items?.length > 3 && (
@@ -291,8 +291,8 @@ function RecentOrders({ orders, onStatusChange }) {
                       value={o.status}
                       onChange={(e) => onStatusChange(o._id, e.target.value)}
                       style={{
-                        padding: "4px 8px", border: "1px solid #ddd", borderRadius: 6,
-                        fontSize: "0.8rem", cursor: "pointer", background: "white",
+                        padding: "4px 8px", border: "1px solid var(--border)", borderRadius: 6,
+                        fontSize: "0.8rem", cursor: "pointer", background: "var(--bg)", color: "var(--text)",
                       }}
                     >
                       {Object.entries(STATUS_COLORS).map(([val, { label }]) => (
