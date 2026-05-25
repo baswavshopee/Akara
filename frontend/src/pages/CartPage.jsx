@@ -1,20 +1,32 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
+import { TAX_RATE, calcShipping } from "../utils/orderConstants";
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQty, totalPrice } = useCart();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  const tax = totalPrice * 0.1; // Example 10% tax
-  const shipping = totalPrice > 0 ? 5.99 : 0;
+  const shipping = calcShipping(totalPrice);
+  const tax = totalPrice * TAX_RATE;
   const finalTotal = totalPrice + tax + shipping;
 
   return (
-    <div className="page" style={{ paddingTop: '120px', minHeight: '80vh' }}>
+    <div className="page" style={{ paddingTop: '80px', minHeight: '80vh' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .cart-item-row {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px !important;
+          }
+          .cart-item-row > div { text-align: left !important; }
+          .cart-item-row > div:last-child { text-align: left !important; font-size: 1rem !important; }
+        }
+      `}</style>
       <div className="main-content">
-        <h1 className="elegant-title" style={{ fontSize: '3rem', marginBottom: '40px', color: 'var(--dark)' }}>
+        <h1 className="elegant-title" style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', marginBottom: '32px', color: 'var(--dark)' }}>
           Your <span className="italic">Cart</span>
         </h1>
 
@@ -40,7 +52,7 @@ export default function CartPage() {
               </div>
 
               {cart.map((item) => (
-                <div key={item._id} className="cart-page-item" style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr', gap: '20px', alignItems: 'center', paddingBottom: '32px', marginBottom: '32px', borderBottom: '1px solid var(--gray-light)' }}>
+                <div key={item._id} className="cart-page-item cart-item-row" style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr', gap: '20px', alignItems: 'center', paddingBottom: '32px', marginBottom: '32px', borderBottom: '1px solid var(--gray-light)' }}>
                   
                   {/* Product Info */}
                   <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -96,9 +108,51 @@ export default function CartPage() {
                 <span style={{ color: 'var(--dark)' }}>₹{finalTotal.toFixed(2)}</span>
               </div>
 
-              <button className="btn-checkout" style={{ background: 'var(--primary)', color: 'white', width: '100%', padding: '20px', fontSize: '1.1rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '2px', cursor: 'pointer', border: 'none', borderRadius: '12px', transition: 'all 0.3s ease' }} onClick={() => navigate("/checkout")}>
-                Proceed to Checkout
-              </button>
+              {(() => {
+                const hasOnlyFreeGifts = cart.every(item => item.price === 0);
+                return (
+                  <>
+                    {hasOnlyFreeGifts && (
+                      <div style={{
+                        marginBottom: "20px",
+                        background: "rgba(239, 68, 68, 0.1)",
+                        border: "1px solid rgba(239, 68, 68, 0.2)",
+                        color: "#ef4444",
+                        padding: "16px",
+                        borderRadius: "12px",
+                        fontSize: "0.85rem",
+                        lineHeight: "1.5",
+                        fontWeight: "bold",
+                        textAlign: "left"
+                      }}>
+                        ⚠️ <b>Shipping Policy Warning:</b> Free gifts cannot be shipped alone! Please add at least one standard product to your cart to proceed.
+                      </div>
+                    )}
+                    <button 
+                      className="btn-checkout" 
+                      disabled={hasOnlyFreeGifts}
+                      style={{ 
+                        background: hasOnlyFreeGifts ? '#666' : 'var(--primary)', 
+                        color: 'white', 
+                        width: '100%', 
+                        padding: '20px', 
+                        fontSize: '1.1rem', 
+                        fontWeight: '800', 
+                        textTransform: 'uppercase', 
+                        letterSpacing: '2px', 
+                        cursor: hasOnlyFreeGifts ? 'not-allowed' : 'pointer', 
+                        border: 'none', 
+                        borderRadius: '12px', 
+                        transition: 'all 0.3s ease',
+                        opacity: hasOnlyFreeGifts ? 0.6 : 1
+                      }} 
+                      onClick={() => navigate("/checkout")}
+                    >
+                      Proceed to Checkout
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
           </div>

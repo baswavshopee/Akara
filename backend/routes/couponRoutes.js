@@ -8,10 +8,26 @@ router.post("/validate", async (req, res) => {
         const { code } = req.body;
         if (!code) return res.status(400).json({ error: "Code is required" });
 
+        const specialCoupons = {
+            "AKARA5": { discount_percent: 5, code: "AKARA5" },
+            "FREESQUISHY": { discount_percent: 0, code: "FREESQUISHY" },
+            "FREESTICKERS": { discount_percent: 0, code: "FREESTICKERS" },
+            "FREECHARM": { discount_percent: 0, code: "FREECHARM" }
+        };
+
+        const upperCode = code.toUpperCase();
+        if (specialCoupons[upperCode]) {
+            return res.json({
+                success: true,
+                discount_percent: specialCoupons[upperCode].discount_percent,
+                code: specialCoupons[upperCode].code
+            });
+        }
+
         const { data: coupon, error } = await supabase
             .from("coupons")
             .select("*")
-            .eq("code", code.toUpperCase())
+            .eq("code", upperCode)
             .eq("is_active", true)
             .single();
 
@@ -23,12 +39,14 @@ router.post("/validate", async (req, res) => {
         const expiry = new Date(coupon.expiry_date);
 
         if (now > expiry) {
+            // Automatically delete expired coupon from DB!
+            await supabase.from("coupons").delete().eq("id", coupon.id);
             return res.status(400).json({ error: "This coupon has expired" });
         }
 
         res.json({ 
             success: true, 
-            discount_percent: coupon.discount_percent,
+            discount_percent: (coupon.code.startsWith("FREECHARM-") || coupon.code.startsWith("FREESTICKERS-") || coupon.code.startsWith("FREESQUISHY-")) ? 0 : coupon.discount_percent,
             code: coupon.code
         });
     } catch (err) {
@@ -36,8 +54,42 @@ router.post("/validate", async (req, res) => {
     }
 });
 
+// PUBLIC: Claim a coupon from spin wheel (valid for 2 days)
+router.post("/claim", async (req, res) => {
+    try {
+        const { code, discountPercent } = req.body;
+        if (!code) return res.status(400).json({ error: "Code is required" });
+
+        // Generate a unique code suffix to prevent collision and reuse
+        const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const uniqueCode = `${code.toUpperCase()}-${randomSuffix}`;
+        
+        // Expiry is 2 days from now
+        const expiryDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+
+        // Bypassing the coupons_discount_percent_check (discount_percent > 0) DB constraint:
+        // Set discount_percent to 1 for physical free gifts (which are ₹0 anyway), and validate overrides it to 0.
+        const parsedPercent = parseInt(discountPercent || 0);
+        const finalPercent = parsedPercent <= 0 ? 1 : parsedPercent;
+
+        const { error } = await supabase
+            .from("coupons")
+            .insert([{
+                code: uniqueCode,
+                discount_percent: finalPercent,
+                expiry_date: expiryDate,
+                is_active: true
+            }]);
+
+        if (error) throw error;
+        res.status(201).json({ success: true, code: uniqueCode, expiryDate });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ADMIN: List all coupons
-router.get("/", async (req, res) => {
+router.get("/", async (_, res) => {
     try {
         const { data, error } = await supabase
             .from("coupons")
@@ -51,8 +103,28 @@ router.get("/", async (req, res) => {
     }
 });
 
+// PUBLIC: Mark a coupon as used (called after successful order)
+router.post("/use", async (req, res) => {
+    try {
+        const { code } = req.body;
+        if (!code) return res.status(400).json({ error: "Code is required" });
+
+        // Only deactivate DB-based coupons (spin-wheel ones have unique suffixes)
+        const { error } = await supabase
+            .from("coupons")
+            .update({ is_active: false })
+            .eq("code", code.toUpperCase());
+
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ADMIN: Create a coupon
-router.post("/", async (req, res) => {
+const { requireAdmin } = require("../middleware/auth");
+router.post("/", requireAdmin, async (req, res) => {
     try {
         const { code, discount_percent, expiry_date } = req.body;
         const { data, error } = await supabase

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../context/CartContext";
+import { TAX_RATE, calcShipping } from "../utils/orderConstants";
 
 export default function CheckoutPage() {
   const { cart, totalPrice, clearCart } = useCart();
@@ -23,9 +24,15 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState("");
+  const [spinCoupon, setSpinCoupon] = useState("");
 
-  const shipping = totalPrice > 0 ? 5.99 : 0;
-  const tax = totalPrice * 0.1;
+  useEffect(() => {
+    const saved = localStorage.getItem("spin_coupon");
+    if (saved) setSpinCoupon(saved);
+  }, []);
+
+  const shipping = calcShipping(totalPrice);
+  const tax = totalPrice * TAX_RATE;
   const discount = appliedCoupon ? (totalPrice * appliedCoupon.discount_percent) / 100 : 0;
   const finalTotal = totalPrice + tax + shipping - discount;
 
@@ -35,19 +42,26 @@ export default function CheckoutPage() {
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.async = true;
     document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
+    return () => { document.body.removeChild(script); };
   }, []);
 
-  if (cart.length === 0) {
+  const hasOnlyFreeGifts = cart.every((item) => item.price === 0);
+
+  if (cart.length === 0 || hasOnlyFreeGifts) {
     return (
       <div className="page" style={{ paddingTop: "120px", minHeight: "80vh", textAlign: "center" }}>
-        <div className="main-content">
-          <h2 style={{ fontSize: "2rem", marginBottom: "16px", color: "var(--dark)" }}>Your cart is empty</h2>
+        <div className="main-content" style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2 style={{ fontSize: "2.2rem", marginBottom: "16px", color: "var(--dark)", fontFamily: "Outfit", fontWeight: 800 }}>
+            {hasOnlyFreeGifts ? "⚠️ Free Gifts Cannot Be Shipped Alone!" : "Your cart is empty"}
+          </h2>
+          <p style={{ color: "var(--gray)", marginBottom: "32px", fontSize: "1.05rem", lineHeight: "1.6" }}>
+            {hasOnlyFreeGifts
+              ? "To check out with your free spin-wheel gift, please add at least one other standard product to your cart."
+              : "Looks like you haven't added anything to your cart yet."}
+          </p>
           <button
             onClick={() => navigate("/")}
-            style={{ background: "var(--dark)", color: "var(--white)", border: "none", padding: "14px 32px", cursor: "pointer", fontSize: "1rem", letterSpacing: "1px" }}
+            style={{ background: "var(--dark)", color: "var(--white)", border: "none", padding: "14px 36px", cursor: "pointer", fontSize: "1rem", letterSpacing: "1px", borderRadius: "30px", fontWeight: "bold" }}
           >
             Continue Shopping
           </button>
@@ -56,10 +70,12 @@ export default function CheckoutPage() {
     );
   }
 
+  // BUG-11: Email format validation added
   function validate() {
     const e = {};
     if (!form.name.trim()) e.name = "Name is required";
     if (!form.phone.trim() || !/^\d{10}$/.test(form.phone.trim())) e.phone = "Enter a valid 10-digit phone number";
+    if (form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = "Enter a valid email address";
     if (!form.address.trim()) e.address = "Address is required";
     if (!form.city.trim()) e.city = "City is required";
     if (!form.pincode.trim() || !/^\d{6}$/.test(form.pincode.trim())) e.pincode = "Enter a valid 6-digit pincode";
@@ -84,6 +100,20 @@ export default function CheckoutPage() {
     }
   }
 
+  async function handleApplySpinCoupon(code) {
+    setCouponError("");
+    try {
+      const { data } = await axios.post("/api/coupons/validate", { code });
+      setAppliedCoupon(data);
+      setCouponCode("");
+      localStorage.removeItem("spin_coupon");
+      setSpinCoupon("");
+    } catch (err) {
+      setCouponError(err.response?.data?.error || "Invalid coupon code");
+      setAppliedCoupon(null);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     const validationErrors = validate();
@@ -92,16 +122,16 @@ export default function CheckoutPage() {
       return;
     }
 
+    // BUG-08 / BUG-19: prevent double-submit
+    if (isProcessing) return;
     setIsProcessing(true);
 
     try {
-      // 1. Create order on the backend to get Razorpay order_id
       const { data: orderData } = await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/api/payment/create-order`,
         { amount: finalTotal }
       );
 
-      // 2. Open Razorpay checkout modal
       const options = {
         key: orderData.key,
         amount: orderData.order.amount,
@@ -111,10 +141,14 @@ export default function CheckoutPage() {
         order_id: orderData.order.id,
         handler: async function (response) {
           try {
-            // Optional: Verify payment signature here using another API call if needed
-            // await axios.post("/api/payment/verify-payment", response);
+            // BUG-01: Verify payment signature before saving order
+            await axios.post(`${import.meta.env.VITE_API_URL || ""}/api/payment/verify-payment`, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
 
-            // 3. Save order to database
+            // Save order to database
             await axios.post(`${import.meta.env.VITE_API_URL || ""}/api/orders`, {
               customerName: form.name,
               customerPhone: form.phone,
@@ -138,15 +172,30 @@ export default function CheckoutPage() {
               paymentId: response.razorpay_payment_id,
               paymentStatus: "paid",
               couponUsed: appliedCoupon ? appliedCoupon.code : null,
-              discountAmount: discount
+              discountAmount: discount,
             });
+
+            // BUG-02: Mark coupon as used so it can't be reused
+            if (appliedCoupon) {
+              try {
+                await axios.post("/api/coupons/use", { code: appliedCoupon.code });
+              } catch {
+                // Non-critical — log but don't block order completion
+              }
+            }
+            // Clear spin coupon from localStorage regardless
+            localStorage.removeItem("spin_coupon");
 
             clearCart();
             alert("Payment successful! Your order has been placed.");
-            navigate("/"); // Or navigate to a dedicated success page
+            navigate("/");
           } catch (err) {
-            console.error("Error saving order:", err);
-            alert("Payment successful, but failed to save order. Please contact support.");
+            const msg = err.response?.data?.error || err.message;
+            if (msg?.includes("signature") || msg?.includes("verified")) {
+              alert("Payment verification failed. Please contact support with your payment ID: " + response.razorpay_payment_id);
+            } else {
+              alert("Payment successful, but failed to save order. Contact support with payment ID: " + response.razorpay_payment_id);
+            }
           }
         },
         prefill: {
@@ -154,18 +203,14 @@ export default function CheckoutPage() {
           email: form.email || "",
           contact: form.phone,
         },
-        theme: {
-          color: "#111111", // Akara dark theme color
-        },
+        theme: { color: "#111111" },
       };
 
       const rzp1 = new window.Razorpay(options);
-      
       rzp1.on("payment.failed", function (response) {
         console.error("Payment Failed:", response.error);
         alert(`Payment failed: ${response.error.description}`);
       });
-
       rzp1.open();
     } catch (err) {
       console.error("Error initiating Razorpay checkout:", err);
@@ -197,27 +242,29 @@ export default function CheckoutPage() {
     color: "var(--dark)",
   };
 
-  const errorStyle = {
-    color: "#e53e3e",
-    fontSize: "0.82rem",
-    marginTop: "4px",
-  };
+  const errorStyle = { color: "#e53e3e", fontSize: "0.82rem", marginTop: "4px" };
 
   return (
-    <div className="page" style={{ paddingTop: "120px", minHeight: "80vh" }}>
+    <div className="page" style={{ paddingTop: "80px", minHeight: "80vh" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .checkout-form-row { display: flex !important; flex-direction: column !important; gap: 16px !important; }
+          .checkout-summary { position: static !important; top: auto !important; padding: 24px !important; }
+        }
+      `}</style>
       <div className="main-content">
-        <h1 className="elegant-title" style={{ fontSize: "3rem", marginBottom: "40px", color: "var(--dark)" }}>
+        <h1 className="elegant-title" style={{ fontSize: "clamp(2rem, 6vw, 3rem)", marginBottom: "32px", color: "var(--dark)" }}>
           Check<span className="italic">out</span>
         </h1>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "60px", alignItems: "start" }}>
+        <div className="checkout-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "60px", alignItems: "start" }}>
           {/* Left: Delivery Details Form */}
           <form onSubmit={handleSubmit} noValidate>
             <h2 style={{ fontSize: "1.3rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "28px", color: "var(--dark)" }}>
               Delivery Details
             </h2>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+            <div className="checkout-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
               <div>
                 <label style={labelStyle}>Full Name *</label>
                 <input name="name" value={form.name} onChange={handleChange} placeholder="Your full name" style={inputStyle("name")} />
@@ -233,6 +280,7 @@ export default function CheckoutPage() {
             <div style={{ marginBottom: "20px" }}>
               <label style={labelStyle}>Email (optional)</label>
               <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="your@email.com" style={inputStyle("email")} />
+              {errors.email && <p style={errorStyle}>{errors.email}</p>}
             </div>
 
             <div style={{ marginBottom: "20px" }}>
@@ -241,7 +289,7 @@ export default function CheckoutPage() {
               {errors.address && <p style={errorStyle}>{errors.address}</p>}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
+            <div className="checkout-form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
               <div>
                 <label style={labelStyle}>City *</label>
                 <input name="city" value={form.city} onChange={handleChange} placeholder="City" style={inputStyle("city")} />
@@ -279,7 +327,7 @@ export default function CheckoutPage() {
                 gap: "12px",
                 opacity: isProcessing ? 0.7 : 1,
                 borderRadius: "12px",
-                transition: "all 0.3s ease"
+                transition: "all 0.3s ease",
               }}
             >
               {isProcessing ? "Processing..." : "Pay & Place Order"}
@@ -291,7 +339,7 @@ export default function CheckoutPage() {
           </form>
 
           {/* Right: Order Summary */}
-          <div style={{ background: "var(--gray-light)", padding: "40px", position: "sticky", top: "100px", borderRadius: "12px", border: "1px solid var(--border)" }}>
+          <div className="checkout-summary" style={{ background: "var(--gray-light)", padding: "40px", position: "sticky", top: "100px", borderRadius: "12px", border: "1px solid var(--border)" }}>
             <h2 style={{ fontSize: "1.3rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "28px", paddingBottom: "16px", borderBottom: "2px solid var(--border)", color: "var(--dark)" }}>
               Order Summary
             </h2>
@@ -312,14 +360,14 @@ export default function CheckoutPage() {
             {/* Coupon Section */}
             <div style={{ marginBottom: "24px", padding: "20px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
               <div style={{ display: "flex", gap: "10px" }}>
-                <input 
-                  placeholder="Coupon Code" 
-                  value={couponCode} 
+                <input
+                  placeholder="Coupon Code"
+                  value={couponCode}
                   onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                   style={{ ...inputStyle(""), padding: "10px 12px", fontSize: "0.9rem", flex: 1 }}
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleApplyCoupon}
                   style={{ background: "var(--dark)", color: "white", border: "none", padding: "0 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", textTransform: "uppercase" }}
                 >
@@ -327,6 +375,22 @@ export default function CheckoutPage() {
                 </button>
               </div>
               {couponError && <p style={{ color: "#e53e3e", fontSize: "0.75rem", marginTop: "8px", fontWeight: 600 }}>{couponError}</p>}
+
+              {spinCoupon && !appliedCoupon && (
+                <div style={{ marginTop: "12px", padding: "10px 12px", background: "rgba(0, 209, 178, 0.08)", border: "1px dashed var(--primary)", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: "0.82rem", color: "var(--dark)" }}>
+                    🎁 Spin Code: <span style={{ fontWeight: 800, color: "var(--primary)" }}>{spinCoupon}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleApplySpinCoupon(spinCoupon)}
+                    style={{ background: "var(--primary)", color: "white", border: "none", padding: "6px 12px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: "800", cursor: "pointer", textTransform: "uppercase" }}
+                  >
+                    Apply
+                  </button>
+                </div>
+              )}
+
               {appliedCoupon && (
                 <div style={{ marginTop: "12px", background: "rgba(16,185,129,0.1)", color: "#059669", padding: "8px 12px", borderRadius: "4px", fontSize: "0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span>Code <b>{appliedCoupon.code}</b> applied!</span>
@@ -338,8 +402,8 @@ export default function CheckoutPage() {
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: "20px" }}>
               {[
                 { label: "Subtotal", value: `₹${totalPrice.toFixed(2)}` },
-                { label: "Shipping", value: `₹${shipping.toFixed(2)}` },
-                { label: "Tax (10%)", value: `₹${tax.toFixed(2)}` },
+                { label: shipping === 0 ? "Shipping (Free above ₹500)" : "Shipping", value: shipping === 0 ? "FREE" : `₹${shipping.toFixed(2)}` },
+                { label: `Tax (${TAX_RATE * 100}%)`, value: `₹${tax.toFixed(2)}` },
                 ...(appliedCoupon ? [{ label: `Discount (${appliedCoupon.discount_percent}%)`, value: `-₹${discount.toFixed(2)}`, color: "#059669" }] : []),
               ].map(({ label, value, color }) => (
                 <div key={label} style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", fontSize: "1rem" }}>

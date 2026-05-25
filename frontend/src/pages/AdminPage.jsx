@@ -55,6 +55,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [banners, setBanners] = useState([]);
   const [coupons, setCoupons] = useState([]);
+  const [mysteryBoxes, setMysteryBoxes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState("");
 
@@ -94,42 +95,50 @@ export default function AdminPage() {
 
   const loadAll = async () => {
     setLoading(true);
-    await Promise.all([loadProducts(), loadEvents(), loadApplications(), loadUsers(), loadBanners(), loadCoupons()]);
+    await Promise.all([loadProducts(), loadEvents(), loadApplications(), loadUsers(), loadBanners(), loadCoupons(), loadMysteryBoxes()]);
     setLoading(false);
+  };
+
+  const loadMysteryBoxes = async () => {
+    try {
+      const headers = await authHeaders();
+      const res = await axios.get("/api/mystery-boxes", { headers });
+      setMysteryBoxes(res.data);
+    } catch { flash("Failed to load mystery boxes"); }
   };
 
   const loadCoupons = async () => {
     try {
       const res = await axios.get("/api/coupons");
       setCoupons(res.data);
-    } catch {}
+    } catch { flash("Failed to load coupons"); }
   };
 
   const loadProducts = async () => {
     try {
       const res = await axios.get("/api/products");
       setProducts(res.data);
-    } catch {}
+    } catch { flash("Failed to load products"); }
   };
   const loadEvents = async () => {
     try {
       const res = await axios.get("/api/events");
       setEvents(res.data);
-    } catch {}
+    } catch { flash("Failed to load events"); }
   };
   const loadApplications = async () => {
     try {
       const headers = await authHeaders();
-      const res = await axios.get("/api/applications", { headers });
+      const res = await axios.get("/api/events/applications", { headers });
       setApplications(res.data);
-    } catch {}
+    } catch { flash("Failed to load applications"); }
   };
   const loadUsers = async () => {
     try {
       const headers = await authHeaders();
       const res = await axios.get("/api/users", { headers });
       setUsers(res.data);
-    } catch {}
+    } catch { flash("Failed to load users"); }
   };
   const refreshGlobalBanners = useRefreshBanners();
 
@@ -138,7 +147,7 @@ export default function AdminPage() {
       const res = await axios.get("/api/banners");
       setBanners(res.data);
       refreshGlobalBanners();
-    } catch {}
+    } catch { flash("Failed to load banners"); }
   };
 
   const openAddProduct = () => {
@@ -297,6 +306,7 @@ export default function AdminPage() {
     { key: "users",        label: "Users",        count: users.length },
     { key: "banners",      label: "Banners",      count: banners.length },
     { key: "coupons",      label: "Coupons",      count: coupons.length },
+    { key: "mystery",      label: "Mystery Boxes",count: mysteryBoxes.length },
   ];
 
   return (
@@ -769,6 +779,47 @@ export default function AdminPage() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* ── Mystery Boxes Tab ── */}
+        {tab === "mystery" && (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{
+              width: "100%", borderCollapse: "collapse", background: "var(--card-bg)",
+              borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+            }}>
+              <thead>
+                <tr style={{ background: "var(--primary)", color: "white" }}>
+                  <th style={thStyle}>Customer</th>
+                  <th style={thStyle}>Category</th>
+                  <th style={thStyle}>Budget</th>
+                  <th style={thStyle}>Preferences</th>
+                  <th style={thStyle}>Submitted On</th>
+                </tr>
+              </thead>
+              <tbody>
+                {mysteryBoxes.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ ...tdStyle, textAlign: "center", color: "var(--gray)", padding: 32 }}>
+                      No mystery box requests yet.
+                    </td>
+                  </tr>
+                )}
+                {mysteryBoxes.map((m, i) => (
+                  <tr key={m._id} style={{ background: i % 2 === 0 ? "var(--bg-alt)" : "var(--card-bg)" }}>
+                    <td style={{ ...tdStyle, fontWeight: 600 }}>
+                      <div>{m.name}</div>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", fontWeight: 400 }}>{m.email}</div>
+                    </td>
+                    <td style={tdStyle}>{m.category}</td>
+                    <td style={tdStyle}>₹{m.price}</td>
+                    <td style={{ ...tdStyle, maxWidth: 300, color: "var(--text-muted)" }}>{m.preferences || "—"}</td>
+                    <td style={tdStyle}>{new Date(m.createdAt).toLocaleDateString("en-GB")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

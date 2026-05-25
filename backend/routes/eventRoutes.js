@@ -30,8 +30,8 @@ function mapApplication(row) {
   };
 }
 
-// GET /api/events/applications — must be before /:id
-router.get("/applications", async (req, res) => {
+// GET /api/events/applications — must be before /:id (BUG-06: protected)
+router.get("/applications", requireAdmin, async (req, res) => {
   try {
     const { data, error } = await supabase
       .from("applications")

@@ -260,7 +260,7 @@ function RecentOrders({ orders, onStatusChange }) {
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                       {(o.items || []).slice(0, 3).map((item, j) => (
                         <div key={j} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <img src={item.image} alt={item.name}
+                          <img src={item.image} alt={item.name} title={`${item.name}${item.customization ? ` (Preferences: ${item.customization})` : ''}`}
                             style={{ width: 28, height: 28, objectFit: "cover", borderRadius: 4 }} />
                           <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>×{item.qty}</span>
                         </div>

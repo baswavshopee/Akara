@@ -1,10 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
 import { useAuth } from "../context/AuthContext";
 import { useBanners } from "../context/BannerContext";
 import Stars from "./Stars";
+
+function getWishlist() {
+  try { return JSON.parse(localStorage.getItem("wishlist") || "[]"); } catch { return []; }
+}
 
 export default function ProductCard({ product }) {
   const navigate = useNavigate();
@@ -12,7 +16,16 @@ export default function ProductCard({ product }) {
   const { showToast } = useToast();
   const { user } = useAuth();
   const banners = useBanners();
-  const [wished, setWished] = useState(false);
+  const [wished, setWished] = useState(() => getWishlist().includes(product._id));
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  useEffect(() => {
+    const wl = getWishlist();
+    const updated = wished
+      ? [...new Set([...wl, product._id])]
+      : wl.filter((id) => id !== product._id);
+    localStorage.setItem("wishlist", JSON.stringify(updated));
+  }, [wished, product._id]);
 
   const discount = product.originalPrice
     ? Math.round((1 - product.price / product.originalPrice) * 100)
@@ -29,13 +42,16 @@ export default function ProductCard({ product }) {
 
   const handleAddToCart = (e) => {
     e.stopPropagation();
+    if (addingToCart) return;
     if (!user) {
       showToast("Please log in to add items to cart");
       navigate("/login");
       return;
     }
+    setAddingToCart(true);
     addToCart(product);
     showToast("Added to cart!");
+    setTimeout(() => setAddingToCart(false), 1000);
   };
 
   return (
@@ -87,10 +103,10 @@ export default function ProductCard({ product }) {
         </div>
         <button
           className="btn-add-cart"
-          disabled={!product.inStock}
+          disabled={!product.inStock || addingToCart}
           onClick={handleAddToCart}
         >
-          {product.inStock ? "🛒 Add to Cart" : "Out of Stock"}
+          {!product.inStock ? "Out of Stock" : addingToCart ? "Adding..." : "🛒 Add to Cart"}
         </button>
       </div>
     </div>

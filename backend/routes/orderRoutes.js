@@ -3,16 +3,33 @@ const router = express.Router();
 const supabase = require("../config/supabase");
 const { requireAdmin } = require("../middleware/auth");
 
-// POST /api/orders — public, called from checkout
+// POST /api/orders — public, called from checkout after payment verified
 router.post("/", async (req, res) => {
   const {
     customerName, customerPhone, customerEmail,
     address, city, pincode, notes,
     items, subtotal, shipping, tax, total,
+    paymentId, paymentStatus,
+    couponUsed, discountAmount,
   } = req.body;
 
   if (!customerName || !customerPhone || !address || !city || !pincode || !items?.length) {
     return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // BUG-28: Server-side out-of-stock validation
+  const productIds = items.map((i) => i.productId || i._id).filter(Boolean);
+  if (productIds.length > 0) {
+    const { data: dbProducts } = await supabase
+      .from("products")
+      .select("id, in_stock, name")
+      .in("id", productIds);
+
+    const outOfStock = (dbProducts || []).filter((p) => !p.in_stock);
+    if (outOfStock.length > 0) {
+      const names = outOfStock.map((p) => p.name).join(", ");
+      return res.status(400).json({ error: `Out of stock: ${names}` });
+    }
   }
 
   const { data, error } = await supabase
@@ -30,6 +47,10 @@ router.post("/", async (req, res) => {
       shipping,
       tax,
       total,
+      payment_id: paymentId || null,
+      payment_status: paymentStatus || "pending",
+      coupon_used: couponUsed || null,
+      discount_amount: discountAmount || 0,
     }])
     .select("id")
     .single();
@@ -49,20 +70,23 @@ router.get("/sales/summary", requireAdmin, async (req, res) => {
     return d.toISOString();
   };
 
-  const [todayRes, weekRes, monthRes, allRes] = await Promise.all([
+  // BUG-20: Use allSettled so one failed query doesn't crash the entire dashboard
+  const [todayRes, weekRes, monthRes, allRes] = await Promise.allSettled([
     supabase.from("orders").select("total").gte("created_at", startOf(0)),
     supabase.from("orders").select("total").gte("created_at", startOf(6)),
     supabase.from("orders").select("total").gte("created_at", startOf(29)),
     supabase.from("orders").select("total"),
   ]);
 
-  const sum = (rows) => (rows || []).reduce((s, r) => s + parseFloat(r.total), 0);
+  const rows = (result) =>
+    result.status === "fulfilled" ? result.value.data || [] : [];
+  const sum = (data) => data.reduce((s, r) => s + parseFloat(r.total || 0), 0);
 
   res.json({
-    today:   { revenue: sum(todayRes.data),  orders: todayRes.data?.length  || 0 },
-    week:    { revenue: sum(weekRes.data),   orders: weekRes.data?.length   || 0 },
-    month:   { revenue: sum(monthRes.data),  orders: monthRes.data?.length  || 0 },
-    allTime: { revenue: sum(allRes.data),    orders: allRes.data?.length    || 0 },
+    today:   { revenue: sum(rows(todayRes)),  orders: rows(todayRes).length },
+    week:    { revenue: sum(rows(weekRes)),   orders: rows(weekRes).length },
+    month:   { revenue: sum(rows(monthRes)),  orders: rows(monthRes).length },
+    allTime: { revenue: sum(rows(allRes)),    orders: rows(allRes).length },
   });
 });
 

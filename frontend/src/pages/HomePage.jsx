@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import Spinner from "../components/Spinner";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 export default function HomePage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState([]);
+  const [, setCategories] = useState([]);
   const [, setFeatured] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,8 +100,7 @@ export default function HomePage() {
       setCategories(catRes.data);
       setFeatured(featRes.data);
       setEvents(eventRes.data);
-    }).catch((err) => {
-      console.error("Failed to load homepage data:", err);
+    }).catch(() => {
     }).finally(() => {
       setLoading(false);
     });
@@ -132,21 +133,276 @@ export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState(null);
   const [btnOffset, setBtnOffset] = useState({ x: 0, y: 0 });
   const [showWheel, setShowWheel] = useState(false);
+  const [showMysteryModal, setShowMysteryModal] = useState(false);
+  const [mysteryCategory, setMysteryCategory] = useState("Comic-verse");
+  const [mysteryPrice, setMysteryPrice] = useState("499");
+  const [mysteryPreferences, setMysteryPreferences] = useState("");
+  const [mysteryName, setMysteryName] = useState("");
+  const [mysteryEmail, setMysteryEmail] = useState("");
+  const [mysteryStatus, setMysteryStatus] = useState(null);
+  const [newsletterEmail, setNewsletterEmail] = useState("");
+  const [newsletterStatus, setNewsletterStatus] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelResult, setWheelResult] = useState(null);
 
-  const handleSpin = () => {
-    if (isSpinning) return;
+  const { user, isAdmin } = useAuth();
+  const { addToCart } = useCart();
+  const [canSpin, setCanSpin] = useState(true);
+  const [spinCountdown, setSpinCountdown] = useState("");
+  const [showSpinNotification, setShowSpinNotification] = useState(false);
+  const [showClaimSuccessModal, setShowClaimSuccessModal] = useState(false);
+  const [claimedCouponInfo, setClaimedCouponInfo] = useState(null);
+
+  const updateCountdown = (ms) => {
+    const totalSecs = Math.floor(ms / 1000);
+    if (totalSecs <= 0) {
+      setCanSpin(true);
+      setSpinCountdown("");
+      setShowSpinNotification(true);
+      return;
+    }
+    const hours = Math.floor(totalSecs / 3600);
+    const minutes = Math.floor((totalSecs % 3600) / 60);
+    const seconds = totalSecs % 60;
+    setSpinCountdown(
+      `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+    );
+  };
+
+  const checkSpinStatus = async () => {
+    if (isAdmin) {
+      setCanSpin(true);
+      setSpinCountdown("");
+      setShowSpinNotification(true);
+      return;
+    }
+
+    let lastSpinStr = null;
+    if (user) {
+      try {
+        const { data } = await axios.get(`/api/users/${user.id}/spin-status`);
+        lastSpinStr = data.lastSpinTime;
+        if (lastSpinStr) {
+          localStorage.setItem("last_spin_time_cached", lastSpinStr);
+        } else {
+          localStorage.removeItem("last_spin_time_cached");
+        }
+      } catch (err) {
+        lastSpinStr = localStorage.getItem("last_spin_time_cached");
+      }
+    } else {
+      lastSpinStr = localStorage.getItem("last_spin_time");
+    }
+
+    if (lastSpinStr) {
+      const lastSpin = new Date(lastSpinStr).getTime();
+      const now = Date.now();
+      const msDiff = now - lastSpin;
+      const limit = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (msDiff < limit) {
+        setCanSpin(false);
+        setShowSpinNotification(false);
+        updateCountdown(limit - msDiff);
+      } else {
+        setCanSpin(true);
+        setSpinCountdown("");
+        setShowSpinNotification(true);
+      }
+    } else {
+      setCanSpin(true);
+      setSpinCountdown("");
+      setShowSpinNotification(true);
+    }
+  };
+
+  useEffect(() => {
+    checkSpinStatus();
+  }, [user]);
+
+  useEffect(() => {
+    if (canSpin) return;
+
+    const interval = setInterval(() => {
+      const lastSpinTimeStr = user 
+        ? localStorage.getItem("last_spin_time_cached") 
+        : localStorage.getItem("last_spin_time");
+        
+      if (lastSpinTimeStr) {
+        const lastSpin = new Date(lastSpinTimeStr).getTime();
+        const now = Date.now();
+        const msDiff = now - lastSpin;
+        const limit = 24 * 60 * 60 * 1000;
+        if (msDiff < limit) {
+          updateCountdown(limit - msDiff);
+        } else {
+          setCanSpin(true);
+          setSpinCountdown("");
+          setShowSpinNotification(true);
+          clearInterval(interval);
+        }
+      } else {
+        setCanSpin(true);
+        setSpinCountdown("");
+        setShowSpinNotification(true);
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [canSpin, user]);
+
+  const fireConfetti = () => {
+    if (window.confetti) {
+      window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      return;
+    }
+    if (document.getElementById("confetti-script")) return;
+    const script = document.createElement("script");
+    script.id = "confetti-script";
+    script.src = "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js";
+    script.async = true;
+    script.onload = () => window.confetti && window.confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+    document.body.appendChild(script);
+  };
+
+  useEffect(() => {
+    if (showClaimSuccessModal) fireConfetti();
+  }, [showClaimSuccessModal]);
+
+  const handleSpin = async () => {
+    if (isSpinning || (!canSpin && !isAdmin)) return;
     setIsSpinning(true);
-    const randomDeg = 1800 + Math.random() * 360;
-    const wheel = document.querySelector(".wheel-graphic");
-    if (wheel) wheel.style.transform = `rotate(${randomDeg}deg)`;
+    setWheelResult(null);
+
+    if (!isAdmin) {
+      const nowISO = new Date().toISOString();
+      if (user) {
+        try {
+          await axios.post(`/api/users/${user.id}/record-spin`);
+          localStorage.setItem("last_spin_time_cached", nowISO);
+        } catch {
+        }
+      } else {
+        localStorage.setItem("last_spin_time", nowISO);
+      }
+      
+      // Disable spinning and trigger check to start countdown
+      setCanSpin(false);
+    }
     
-    setTimeout(() => {
+    const targetIndex = Math.floor(Math.random() * 6);
+    const options = [
+      "5% off on 500 and above",
+      "Spin Again",
+      "Free Charm",
+      "Try again tomorrow",
+      "Free Squishy",
+      "Free Stickers"
+    ];
+    
+    const randomOffset = Math.floor(Math.random() * 40) - 20; 
+    const spinRot = 1800 + 360 - (targetIndex * 60 + 30) + randomOffset;
+    
+    const wheel = document.querySelector(".wheel-graphic");
+    if (wheel) wheel.style.transform = `rotate(${spinRot}deg)`;
+    
+    setTimeout(async () => {
       setIsSpinning(false);
-      setWheelResult("AKARA20");
-      showToast("Congrats! Use code AKARA20 for 20% off!");
+      const result = options[targetIndex];
+      
+      if (result === "Spin Again") {
+        // Re-enable spin immediately and clear DB/local timers
+        if (user) {
+          try {
+            await axios.post(`/api/users/${user.id}/reset-spin`);
+            localStorage.removeItem("last_spin_time_cached");
+          } catch {
+          }
+        } else {
+          localStorage.removeItem("last_spin_time");
+        }
+        setCanSpin(true);
+        setSpinCountdown("");
+        setWheelResult(null);
+        alert("🎉 You won 'Spin Again'! You got an extra free spin immediately! Try your luck again!");
+      } else {
+        setWheelResult(result);
+      }
     }, 4000);
+  };
+
+  const handleClaim = async () => {
+    const codeMap = {
+      "5% off on 500 and above": "AKARA5",
+      "Free Squishy": "FREESQUISHY",
+      "Free Stickers": "FREESTICKERS",
+      "Free Charm": "FREECHARM"
+    };
+    
+    const discountPercentMap = {
+      "AKARA5": 5,
+      "FREESQUISHY": 0,
+      "FREESTICKERS": 0,
+      "FREECHARM": 0
+    };
+
+    const giftProductMap = {
+      "Free Charm": {
+        _id: "free-gift-charm",
+        name: "🎁 Dainty Silver Charm (Free Gift)",
+        price: 0,
+        image: "https://images.unsplash.com/photo-1590548784585-645d2b65306a?w=600&q=80",
+        category: "Charms",
+        isFreeGift: true
+      },
+      "Free Stickers": {
+        _id: "free-gift-stickers",
+        name: "🎁 Vinyl Sticker Pack (Free Gift)",
+        price: 0,
+        image: "https://images.unsplash.com/photo-1589051030483-e30739c83218?w=600&q=80",
+        category: "Stickers",
+        isFreeGift: true
+      },
+      "Free Squishy": {
+        _id: "free-gift-squishy",
+        name: "🎁 Panda Squishy Toy (Free Gift)",
+        price: 0,
+        image: "https://images.unsplash.com/photo-1559124391-c6e50c777b08?w=600&q=80",
+        category: "Squishies",
+        isFreeGift: true
+      }
+    };
+
+    const baseCode = codeMap[wheelResult];
+    if (baseCode) {
+      try {
+        const { data } = await axios.post("/api/coupons/claim", {
+          code: baseCode,
+          discountPercent: discountPercentMap[baseCode]
+        });
+
+        localStorage.setItem("spin_coupon", data.code);
+        
+        // Add physical free gift to cart immediately
+        const isFreeGift = ["Free Squishy", "Free Stickers", "Free Charm"].includes(wheelResult);
+        if (isFreeGift && giftProductMap[wheelResult]) {
+          addToCart(giftProductMap[wheelResult], 1);
+        }
+
+        setClaimedCouponInfo({
+          code: data.code,
+          expiryDate: new Date(data.expiryDate).toLocaleDateString(),
+          isFreeGift,
+          giftName: wheelResult
+        });
+        
+        setShowClaimSuccessModal(true);
+        setShowWheel(false);
+      } catch (err) {
+        alert("Failed to claim coupon. Please try again.");
+      }
+    }
   };
 
   const handleMagnetic = (e) => {
@@ -176,7 +432,7 @@ export default function HomePage() {
               <div className="carousel-slide-bg"><img src={slide.image} alt={slide.subtitle} /></div>
               <div className="hero-main-row">
                 <div className="hero-left">
-                  <h1 className="elegant-title">Craft your <br/><span className="italic">{slide.subtitle.toLowerCase()}</span></h1>
+                  <h1 className="elegant-title">{slide.title} your <br/><span className="italic">{slide.subtitle.toLowerCase()}</span></h1>
                   <p className="hero-desc">{slide.desc}</p>
                   <Link 
                     to="/shop" 
@@ -254,8 +510,8 @@ export default function HomePage() {
       <section className="hero reveal">
         <div className="hero-content-split">
           <div className="hero-text-side">
-            <h1>Handcrafted <span>Artistry.</span> Unique <span>Identity.</span></h1>
-            <p>Elevate your everyday with premium custom badges, magnets, and curated keepsakes designed for the modern creative.</p>
+            <h1>Handcrafted <span>Happiness.</span> Curated <span>Collectibles.</span></h1>
+            <p>Elevate your everyday with premium badges, magnets, stickers, posters, bookmarks, and figurines designed to bring art, personality, and fandom into every corner of your life.</p>
             <div className="hero-btns">
               <button 
                 className="btn btn-primary" 
@@ -278,13 +534,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Marquee Row */}
-      <div className="marquee-row">
-        <div className="marquee-content">
-          NEW DROPS <span>•</span> LIMITED EDITION <span>•</span> HANDCRAFTED <span>•</span> VINTAGE CAPSULE <span>•</span> AKARA X PREMIUM <span>•</span> ARTISTRY <span>•</span> 
-          NEW DROPS <span>•</span> LIMITED EDITION <span>•</span> HANDCRAFTED <span>•</span> VINTAGE CAPSULE <span>•</span> AKARA X PREMIUM <span>•</span> ARTISTRY <span>•</span> 
-        </div>
-      </div>
 
 
       {/* Mystery Box Section */}
@@ -292,10 +541,9 @@ export default function HomePage() {
         <div style={{ position: 'absolute', top: '-50px', left: '-50px', fontSize: '10rem', opacity: 0.05 }}>📦</div>
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ marginBottom: '10px' }}><span style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 900 }}>秘密</span></div>
-          <span style={{ background: 'var(--primary)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', color: 'white' }}>Aki's Choice</span>
           <h2 style={{ fontSize: '3rem', fontFamily: 'Outfit', fontWeight: 800, margin: '20px 0', textShadow: '0 0 15px rgba(var(--primary-rgb), 0.4)', color: 'white' }}>The Akara <span>Mystery Box</span></h2>
-          <p style={{ maxWidth: '600px', margin: '0 auto 40px', opacity: 0.8, fontSize: '1.1rem', color: 'white' }}>Feeling adventurous? Get 5 high-quality keepsakes worth ₹1999 for just ₹999. Every box is a unique surprise!</p>
-          <button className="btn btn-white-pill anime-btn-glow" onClick={() => navigate("/shop")}>Unlock My Mystery Box →</button>
+          <p style={{ maxWidth: '700px', margin: '0 auto 40px', opacity: 0.8, fontSize: '1.1rem', color: 'white', lineHeight: '1.6' }}>Discover the thrill of surprise with our curated Mystery Boxes available in ₹499, ₹999, and ₹1499 variants — each packed with collectibles and goodies worth more than what you pay for. From stickers and badges to charms, posters, bookmarks, magnets, figurines, and exclusive extras, every box is designed to feel personal, exciting, and unique.</p>
+          <button className="btn btn-white-pill anime-btn-glow" onClick={() => setShowMysteryModal(true)}>Unlock your Mystery Box</button>
         </div>
       </section>
 
@@ -323,18 +571,17 @@ export default function HomePage() {
         </div>
       </section>
       <section className="process-section reveal">
-        <h2 className="section-title">The Akara <span>Process</span></h2>
-        <p className="section-subtitle">How we turn your ideas into tangible memories.</p>
+        <h2 className="section-title">AKARA <span>Process</span></h2>
         <div className="process-grid">
           <div className="process-card">
             <span className="process-icon">🎨</span>
-            <h3>Conceptual Design</h3>
-            <p>Every piece starts with a sketch. Our artists work to capture your unique vision in every detail.</p>
+            <h3>Curated Selection</h3>
+            <p>Every collection is thoughtfully assembled with unique designs, trending fandoms, and creative aesthetics chosen to match your style and interests.</p>
           </div>
           <div className="process-card">
             <span className="process-icon">⚒️</span>
-            <h3>Precision Craft</h3>
-            <p>Using premium materials and state-of-the-art techniques, we bring the design to life with absolute care.</p>
+            <h3>Quality Craftsmanship</h3>
+            <p>From badges and stickers to figurines and charms, each piece is made using premium materials and detailed finishing for a collectible-worthy feel.</p>
           </div>
           <div className="process-card">
             <span className="process-icon">🎁</span>
@@ -347,10 +594,9 @@ export default function HomePage() {
       {/* Stats Bar */}
       <div className="stats-bar reveal">
         <div className="stats-inner">
-          <div className="stat-item"><div className="stat-num">50k+</div><div className="stat-label">Happy Customers</div></div>
-          <div className="stat-item"><div className="stat-num">120+</div><div className="stat-label">Cities Reached</div></div>
-          <div className="stat-item"><div className="stat-num">4.9/5</div><div className="stat-label">Star Rating</div></div>
-          <div className="stat-item"><div className="stat-num">19+</div><div className="stat-label">Categories</div></div>
+          <div className="stat-item"><div className="stat-num">300+</div><div className="stat-label">Products</div></div>
+          <div className="stat-item"><div className="stat-num">500+</div><div className="stat-label">Happy Customers</div></div>
+          <div className="stat-item"><div className="stat-num">4.8</div><div className="stat-label">Stars - Average Rating</div></div>
         </div>
       </div>
 
@@ -365,50 +611,9 @@ export default function HomePage() {
       </div>
 
 
-      {/* Cinematic Workshop Section */}
-      <section className="reveal dark-section" style={{ 
-        position: 'relative', 
-        height: '600px', 
-        overflow: 'hidden', 
-        margin: '80px 0',
-        borderRadius: '32px',
-        marginInline: '32px'
-      }}>
-        <img 
-          src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1600&q=80" 
-          alt="Workshop" 
-          style={{ 
-            width: '100%', 
-            height: '100%', 
-            objectFit: 'cover', 
-            opacity: '0.5' 
-          }}
-        />
-        <div style={{ 
-          position: 'absolute', 
-          inset: 0, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          color: 'white', 
-          textAlign: 'center', 
-          padding: '0 24px',
-          background: 'radial-gradient(circle, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.1) 100%)'
-        }}>
-          <h2 style={{ fontSize: 'clamp(2.5rem, 5vw, 3.5rem)', fontFamily: 'Outfit', fontWeight: 800, marginBottom: '16px', color: 'white' }}>Behind the <span>Scenes</span></h2>
-          <p style={{ maxWidth: '600px', fontSize: '1.1rem', opacity: 0.9, lineHeight: 1.6 }}>See the passion and precision that goes into every single Akara piece. We don't just make products; we craft legacies.</p>
-          <button className="btn btn-white-pill" style={{ marginTop: '32px' }} onClick={() => navigate("/shop")}>Watch the Story →</button>
-        </div>
-      </section>
-
       {/* Campaigns Bento Grid */}
       <section className="bento-grid reveal">
-          <Link to="/shop" className="bento-left">
-            <img src="https://images.unsplash.com/photo-1445205170230-053b83016050?w=1600&q=80" alt="Premium" className="bento-img" />
-            <div className="bento-overlay"><h2>AKARA<br/>X PREMIUM</h2></div>
-          </Link>
-          <div className="bento-right">
+          <div className="bento-right" style={{ width: '100%' }}>
             <Link to="/shop" className="bento-right-top">
               <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=1600&q=80" alt="Vintage" className="bento-img" />
               <div className="bento-overlay"><h2>VINTAGE CAPSULE</h2></div>
@@ -542,10 +747,32 @@ export default function HomePage() {
         <div className="newsletter-content">
           <h2>Join the <span>Akara Club</span></h2>
           <p>Subscribe to get early access to new drops, exclusive events, and 10% off your first order.</p>
-          <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-            <input type="email" placeholder="Your email address" className="newsletter-input" required />
+          <form className="newsletter-form" onSubmit={async (e) => {
+            e.preventDefault();
+            try {
+              await axios.post("/api/newsletter", { email: newsletterEmail });
+              setNewsletterStatus("success");
+              setNewsletterEmail("");
+            } catch {
+              setNewsletterStatus("error");
+            }
+          }}>
+            <input
+              type="email"
+              placeholder="Your email address"
+              className="newsletter-input"
+              required
+              value={newsletterEmail}
+              onChange={(e) => setNewsletterEmail(e.target.value)}
+            />
             <button type="submit" className="btn btn-primary">Join Now</button>
           </form>
+          {newsletterStatus === "success" && (
+            <p style={{ color: "var(--primary)", marginTop: "12px", fontWeight: 700 }}>You're subscribed!</p>
+          )}
+          {newsletterStatus === "error" && (
+            <p style={{ color: "#ef4444", marginTop: "12px", fontWeight: 700 }}>Something went wrong. Please try again.</p>
+          )}
         </div>
       </section>
 
@@ -561,36 +788,393 @@ export default function HomePage() {
             <p>Win exclusive discounts for your next custom keepsake!</p>
             <div className="wheel-pointer"></div>
             <div className="wheel-graphic">
+              {/* Background wedges */}
               {[
-                { label: "10% OFF", color: "var(--primary)" },
-                { label: "TRY LUCK", color: "#1a1a1a" },
-                { label: "20% OFF", color: "var(--primary)" },
-                { label: "FREEBIE", color: "#222222" },
-                { label: "5% OFF", color: "var(--primary)" },
-                { label: "MYSTERY", color: "#1a1a1a" }
+                { label: "Free Squishy", color: "var(--primary)" },
+                { label: "Free Stickers", color: "#1a1a1a" },
+                { label: "5% off on 500 and above", color: "var(--primary)" },
+                { label: "Spin Again", color: "#222222" },
+                { label: "Free Charm", color: "var(--primary)" },
+                { label: "Try again tomorrow", color: "#1a1a1a" }
               ].map((seg, i) => (
-                <div key={i} className="wheel-segment" style={{ 
-                  "--i": i, 
-                  "--bg": seg.color,
-                  transform: `rotate(${i * 60}deg) skewY(-30deg)`
+                <div key={`bg-${i}`} className="wheel-segment" style={{ 
+                  transform: `rotate(${i * 60}deg) skewY(-30deg)`,
+                  background: seg.color
+                }} />
+              ))}
+
+              {/* Text labels on top */}
+              {[
+                { label: "Free Squishy", color: "var(--primary)" },
+                { label: "Free Stickers", color: "#1a1a1a" },
+                { label: "5% off on 500 and above", color: "var(--primary)" },
+                { label: "Spin Again", color: "#222222" },
+                { label: "Free Charm", color: "var(--primary)" },
+                { label: "Try again tomorrow", color: "#1a1a1a" }
+              ].map((seg, i) => (
+                <div key={`txt-${i}`} className="wheel-segment" style={{ 
+                  transform: `rotate(${i * 60}deg) skewY(-30deg)`,
+                  background: 'transparent',
+                  border: 'none'
                 }}>
                   <span className="segment-label">{seg.label}</span>
                 </div>
               ))}
             </div>
-            {wheelResult ? (
-              <div style={{ background: '#f0f0f0', padding: '15px', borderRadius: '12px', marginTop: '20px' }}>
-                <p style={{ margin: 0, fontSize: '0.8rem' }}>Your Code:</p>
-                <h3 style={{ margin: 0, color: 'var(--primary)' }}>{wheelResult}</h3>
-              </div>
-            ) : (
-              <button className="btn btn-primary" onClick={handleSpin} disabled={isSpinning}>
-                {isSpinning ? "Spinning..." : "Spin Now"}
-              </button>
+             {wheelResult ? (
+               <div style={{ background: '#f0f0f0', padding: '20px', borderRadius: '12px', marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                 <div>
+                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--gray)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Your Code:</p>
+                   <h3 style={{ margin: '4px 0 0 0', color: 'var(--primary)', textAlign: 'center', fontFamily: 'Outfit', fontWeight: 800 }}>{wheelResult}</h3>
+                 </div>
+                 {["5% off on 500 and above", "Free Squishy", "Free Stickers", "Free Charm"].includes(wheelResult) && (
+                   <button 
+                     onClick={handleClaim}
+                     style={{
+                       background: 'var(--primary)',
+                       color: 'white',
+                       border: 'none',
+                       padding: '10px 30px',
+                       borderRadius: '8px',
+                       fontWeight: '800',
+                       cursor: 'pointer',
+                       fontSize: '0.9rem',
+                       textTransform: 'uppercase',
+                       letterSpacing: '1px',
+                       boxShadow: '0 4px 10px rgba(0, 209, 178, 0.3)',
+                       transition: 'all 0.3s ease'
+                     }}
+                   >
+                     Claim
+                   </button>
+                 )}
+               </div>
+             ) : (
+              <button 
+                 className="btn btn-primary" 
+                 onClick={handleSpin} 
+                 disabled={isSpinning || !canSpin}
+                 style={!canSpin ? { background: '#666', borderColor: '#666', cursor: 'not-allowed' } : {}}
+               >
+                 {isSpinning ? "Spinning..." : !canSpin ? `Next Spin in: ${spinCountdown}` : "Spin Now"}
+               </button>
             )}
           </div>
         </div>
       )}
+
+      {/* Mystery Box Modal */}
+      {showMysteryModal && (
+        <div className="wheel-modal" onClick={() => setShowMysteryModal(false)}>
+          <div className="wheel-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', textAlign: 'left', padding: '40px 30px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }} onClick={() => setShowMysteryModal(false)}>×</button>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, marginBottom: '20px', textAlign: 'center' }}>Unlock your <span>Mystery Box</span></h2>
+            
+            {mysteryStatus === "success" ? (
+              <div style={{ textAlign: "center", padding: "40px 0" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🎉</div>
+                <h3 style={{ fontFamily: "Outfit", fontWeight: 800, fontSize: "1.5rem", marginBottom: "8px" }}>Request Submitted!</h3>
+                <p style={{ color: "var(--gray)", marginBottom: "24px" }}>We'll get back to you shortly with details about your custom mystery box.</p>
+                <button className="btn btn-primary" onClick={() => setShowMysteryModal(false)}>Close</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Your Name *</label>
+                    <input type="text" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryName} onChange={(e) => setMysteryName(e.target.value)} required />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Email Address *</label>
+                    <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryEmail} onChange={(e) => setMysteryEmail(e.target.value)} required />
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Choose your favorite category:</label>
+                  <select
+                    value={mysteryCategory}
+                    onChange={(e) => setMysteryCategory(e.target.value)}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }}
+                  >
+                    <option>Comic-verse</option>
+                    <option>Anime</option>
+                    <option>Western Pop Culture</option>
+                    <option>Eastern Pop Culture</option>
+                    <option>Sports</option>
+                    <option>Video Games</option>
+                    <option>Music</option>
+                    <option>Motivational</option>
+                    <option>Mythology</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Options for Price:</label>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    {['499', '999', '1499'].map(price => (
+                      <label key={price} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="mystery-price"
+                          value={price}
+                          checked={mysteryPrice === price}
+                          onChange={() => setMysteryPrice(price)}
+                        /> ₹{price}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Customization (Optional):</label>
+                  <input 
+                    type="text" 
+                    placeholder="Mention your favorite themes or interests..." 
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} 
+                    value={mysteryPreferences}
+                    onChange={(e) => setMysteryPreferences(e.target.value)}
+                  />
+                </div>
+
+                <p style={{ fontSize: '0.9rem', color: '#555', lineHeight: '1.6', marginBottom: '24px' }}>
+                  Want a mix of themes? That works too. Simply mention your favorite characters, series, artists, teams, aesthetics, or interests in the customization box, and we'll curate a box specially tailored for you.
+                </p>
+
+                {mysteryStatus === "error" && <div style={{ color: "red", marginBottom: "16px", fontSize: "0.9rem", textAlign: "center" }}>Please fill in your name and email.</div>}
+
+                <button className="btn btn-primary" style={{ width: '100%', padding: '14px', borderRadius: '50px' }} onClick={async () => {
+                  if (!mysteryName || !mysteryEmail) {
+                    setMysteryStatus("error");
+                    return;
+                  }
+                  try {
+                    await axios.post("/api/mystery-boxes", {
+                      name: mysteryName,
+                      email: mysteryEmail,
+                      category: mysteryCategory,
+                      price: mysteryPrice,
+                      preferences: mysteryPreferences
+                    });
+                    setMysteryStatus("success");
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}>
+                  Submit Request
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Spin Available Notification */}
+      {showSpinNotification && (
+        <div style={{
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          background: 'rgba(26, 26, 26, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '20px 24px',
+          borderRadius: '16px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          maxWidth: '320px',
+          animation: 'slideIn 0.5s ease-out',
+          color: 'white',
+          fontFamily: 'Outfit'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '1.2rem' }}>🎉</span>
+            <button 
+              onClick={() => setShowSpinNotification(false)}
+              style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 'bold' }}
+            >
+              ✕
+            </button>
+          </div>
+          <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--primary)' }}>Daily Spin is Available!</div>
+          <div style={{ fontSize: '0.85rem', color: '#ccc', lineHeight: '1.4' }}>
+            Your free daily spin is ready. Spin the wheel to unlock exclusive discounts and free gifts!
+          </div>
+          <button 
+            onClick={() => {
+              setShowWheel(true);
+              setShowSpinNotification(false);
+            }}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              padding: '10px 16px',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              textAlign: 'center'
+            }}
+          >
+            Spin & Save Now
+          </button>
+        </div>
+      )}
+
+      {/* Claim Success Celebration Modal */}
+      {showClaimSuccessModal && claimedCouponInfo && (
+        <div className="wheel-modal" style={{ zIndex: 10000 }}>
+          <div 
+            className="wheel-container" 
+            style={{ 
+              maxWidth: '480px', 
+              textAlign: 'center', 
+              padding: '40px 30px', 
+              background: 'rgba(26, 26, 26, 0.95)',
+              backdropFilter: 'blur(15px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '24px',
+              color: 'white',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              animation: 'scaleUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+            }}
+          >
+            <div style={{ fontSize: '4rem', marginBottom: '16px' }}>🎉</div>
+            <h2 style={{ fontFamily: 'Outfit', fontWeight: 900, fontSize: '1.8rem', marginBottom: '8px', color: 'var(--primary)' }}>
+              {claimedCouponInfo.isFreeGift ? "Free Gift Claimed!" : "Prize Claimed!"}
+            </h2>
+            <p style={{ fontSize: '0.95rem', color: '#ccc', marginBottom: '24px', lineHeight: '1.5' }}>
+              {claimedCouponInfo.isFreeGift 
+                ? `Your free gift "${claimedCouponInfo.giftName}" has been successfully added directly to your cart at ₹0 price!` 
+                : "Your exclusive spin wheel offer has been successfully registered in our database!"}
+            </p>
+            
+            <div style={{ 
+              background: 'rgba(255, 255, 255, 0.05)', 
+              border: '1px dashed var(--primary)', 
+              padding: '16px 20px', 
+              borderRadius: '12px', 
+              marginBottom: '20px' 
+            }}>
+              <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: '#aaa', letterSpacing: '1px', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>Your Coupon Code:</span>
+              <strong style={{ fontSize: '1.6rem', color: 'var(--primary)', fontFamily: 'monospace', letterSpacing: '2px' }}>
+                {claimedCouponInfo.code}
+              </strong>
+            </div>
+
+            {claimedCouponInfo.isFreeGift ? (
+              <div style={{ fontSize: '0.85rem', color: '#ffbd59', background: 'rgba(255, 189, 89, 0.1)', border: '1px solid rgba(255, 189, 89, 0.2)', padding: '12px 16px', borderRadius: '12px', marginBottom: '30px', fontWeight: 'bold', lineHeight: '1.4', textAlign: 'left' }}>
+                ⚠️ <b>Shipping Policy:</b> We cannot ship free gift products alone. When you purchase any other standard product, your free gift will be shipped with it together!
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.82rem', color: '#ff6b6b', background: 'rgba(255, 107, 107, 0.1)', padding: '10px 14px', borderRadius: '8px', marginBottom: '30px', fontWeight: 'bold', lineHeight: '1.4' }}>
+                ⏳ Valid for exactly 2 days (expires {claimedCouponInfo.expiryDate}). After this, it will automatically expire and be deleted from the database.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { setShowClaimSuccessModal(false); navigate("/checkout"); }}
+                style={{ width: '100%', padding: '14px', borderRadius: '12px', fontWeight: 'bold', fontSize: '0.95rem', letterSpacing: '1px', border: 'none', cursor: 'pointer' }}
+              >
+                Go to Checkout
+              </button>
+              <button 
+                onClick={() => setShowClaimSuccessModal(false)}
+                style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', padding: '8px' }}
+              >
+                Continue Browsing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideIn {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes scaleUp {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+          /* Summer Capsule section */
+          .home-page section[style*="40px 32px"] {
+            margin: 12px !important;
+            padding: 56px 20px !important;
+            border-radius: 20px !important;
+          }
+
+          /* Mystery box section */
+          .home-page section.dark-section {
+            margin: 40px 0 !important;
+            border-radius: 0 !important;
+            padding: 64px 20px !important;
+          }
+          .home-page section.dark-section h2 { font-size: 2rem !important; }
+          .home-page section.dark-section p { font-size: 0.95rem !important; }
+
+          /* Gallery section */
+          .home-page section[style*="80px 32px"] {
+            padding: 48px 16px !important;
+          }
+
+          /* Cinematic workshop section */
+          .home-page section[style*="600px"] {
+            height: 340px !important;
+            margin: 40px 0 !important;
+            border-radius: 0 !important;
+          }
+          .home-page section[style*="600px"] h2 { font-size: 2rem !important; }
+
+          /* Founders section */
+          .founders-section {
+            margin: 40px 0 !important;
+            padding: 48px 20px !important;
+            border-radius: 0 !important;
+          }
+          .founders-right h2 { font-size: 2rem !important; }
+          .founders-right p { font-size: 0.95rem !important; }
+          .founders-quote { font-size: 1.1rem !important; }
+
+          /* Events banner */
+          .home-page a[href="/events"] > div {
+            margin: 0 16px 32px !important;
+            padding: 20px 16px !important;
+            flex-wrap: wrap !important;
+            gap: 12px !important;
+          }
+
+          /* Partners section */
+          .home-page section[style*="Featured"] div[style*="gap: '60px'"],
+          .home-page .partners-row {
+            gap: 24px !important;
+          }
+
+          /* Spin notification */
+          .home-page div[style*="bottom: '30px'"][style*="right: '30px'"] {
+            right: 12px !important;
+            bottom: 140px !important;
+            max-width: 280px !important;
+          }
+
+          /* Section title clamp */
+          .section-title { font-size: clamp(1.4rem, 5vw, 2.4rem) !important; }
+
+          /* Process section title */
+          .process-section h2 { font-size: clamp(1.4rem, 5vw, 2.4rem); }
+        }
+      `}</style>
     </div>
   );
 }

@@ -48,4 +48,46 @@ router.post('/invite', requireAdmin, async (req, res) => {
   res.json({ success: true, userId: data.user?.id });
 });
 
+// GET /api/users/:userId/spin-status
+router.get('/:userId/spin-status', async (req, res) => {
+  try {
+    const { data: { user }, error } = await supabase.auth.admin.getUserById(req.params.userId);
+    if (error || !user) throw error || new Error('User not found');
+
+    res.json({ lastSpinTime: user.user_metadata?.last_spin_time || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/:userId/record-spin
+router.post('/:userId/record-spin', async (req, res) => {
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(
+      req.params.userId,
+      { user_metadata: { last_spin_time: new Date().toISOString() } }
+    );
+    if (error) throw error;
+
+    res.json({ success: true, lastSpinTime: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/users/:userId/reset-spin
+router.post('/:userId/reset-spin', async (req, res) => {
+  try {
+    const { data, error } = await supabase.auth.admin.updateUserById(
+      req.params.userId,
+      { user_metadata: { last_spin_time: null } }
+    );
+    if (error) throw error;
+
+    res.json({ success: true, lastSpinTime: null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

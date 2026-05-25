@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 
 const productRoutes = require("./routes/productRoutes");
@@ -11,12 +12,48 @@ const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const bannerRoutes = require("./routes/bannerRoutes");
 const couponRoutes = require("./routes/couponRoutes");
+const newsletterRoutes = require("./routes/newsletterRoutes");
+const mysteryBoxRoutes = require("./routes/mysteryBoxRoutes");
 const supabase = require("./config/supabase");
 
 const app = express();
 
-app.use(cors());
+// BUG-04: Restrict CORS to known origins
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim());
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, server-to-server)
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+
+// BUG-27: Global rate limiter — 200 req/15 min per IP
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+app.use(globalLimiter);
+
+// Stricter limiter for payment and coupon claim endpoints
+const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests on this endpoint." },
+});
 
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
@@ -25,10 +62,12 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/payment", paymentRoutes);
-app.use("/api/coupons", couponRoutes);
+app.use("/api/payment", sensitiveLimiter, paymentRoutes);
+app.use("/api/coupons", sensitiveLimiter, couponRoutes);
+app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/mystery-boxes", mysteryBoxRoutes);
 
-app.get("/", (req, res) => res.json({ message: "Akara API running" }));
+app.get("/", (_, res) => res.json({ message: "Akara API running" }));
 
 async function deleteExpiredEvents() {
   const { error } = await supabase
@@ -45,7 +84,6 @@ if (process.env.NODE_ENV !== "production") {
     setInterval(deleteExpiredEvents, 60 * 60 * 1000);
   });
 } else {
-  // For Vercel Serverless
   deleteExpiredEvents();
 }
 
