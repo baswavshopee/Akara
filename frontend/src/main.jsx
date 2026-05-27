@@ -7,6 +7,10 @@ import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./context/ToastContext";
 import { BannerProvider } from "./context/BannerContext";
 import "./index.css";
+import axios from "axios";
+
+// Configure global Axios defaults
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || "";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

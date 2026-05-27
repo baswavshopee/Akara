@@ -25,10 +25,21 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [couponError, setCouponError] = useState("");
   const [spinCoupon, setSpinCoupon] = useState("");
+  const [publicCoupons, setPublicCoupons] = useState([]);
 
   useEffect(() => {
     const saved = localStorage.getItem("spin_coupon");
     if (saved) setSpinCoupon(saved);
+
+    const fetchCoupons = async () => {
+      try {
+        const { data } = await axios.get("/api/coupons/public");
+        setPublicCoupons(data);
+      } catch (err) {
+        console.error("Failed to fetch public coupons", err);
+      }
+    };
+    fetchCoupons();
   }, []);
 
   const shipping = calcShipping(totalPrice);
@@ -375,6 +386,37 @@ export default function CheckoutPage() {
                 </button>
               </div>
               {couponError && <p style={{ color: "#e53e3e", fontSize: "0.75rem", marginTop: "8px", fontWeight: 600 }}>{couponError}</p>}
+
+              {publicCoupons.length > 0 && !appliedCoupon && (
+                <div style={{ marginTop: "16px" }}>
+                  <p style={{ fontSize: "0.8rem", fontWeight: "700", color: "var(--gray)", marginBottom: "8px", textTransform: "uppercase" }}>Available Coupons</p>
+                  <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                    {publicCoupons.map(c => (
+                      <div 
+                        key={c.code}
+                        onClick={() => {
+                          setCouponCode(c.code);
+                        }}
+                        style={{
+                          background: "var(--bg)",
+                          border: "1px dashed var(--primary)",
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          fontSize: "0.75rem",
+                          fontWeight: "800",
+                          color: "var(--primary)",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                        onMouseOver={(e) => e.currentTarget.style.background = "rgba(0, 209, 178, 0.1)"}
+                        onMouseOut={(e) => e.currentTarget.style.background = "var(--bg)"}
+                      >
+                        {c.code} <span style={{ fontWeight: 600, color: "var(--gray)", marginLeft: "4px" }}>({c.discount_percent}% OFF)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {spinCoupon && !appliedCoupon && (
                 <div style={{ marginTop: "12px", padding: "10px 12px", background: "rgba(0, 209, 178, 0.08)", border: "1px dashed var(--primary)", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>

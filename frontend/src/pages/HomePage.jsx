@@ -170,12 +170,6 @@ export default function HomePage() {
   };
 
   const checkSpinStatus = async () => {
-    if (isAdmin) {
-      setCanSpin(true);
-      setSpinCountdown("");
-      setShowSpinNotification(true);
-      return;
-    }
 
     let lastSpinStr = null;
     if (user) {
@@ -202,7 +196,7 @@ export default function HomePage() {
 
       if (msDiff < limit) {
         setCanSpin(false);
-        setShowSpinNotification(false);
+        setShowSpinNotification(true);
         updateCountdown(limit - msDiff);
       } else {
         setCanSpin(true);
@@ -271,25 +265,24 @@ export default function HomePage() {
   }, [showClaimSuccessModal]);
 
   const handleSpin = async () => {
-    if (isSpinning || (!canSpin && !isAdmin)) return;
+    if (isSpinning || !canSpin) return;
     setIsSpinning(true);
     setWheelResult(null);
 
-    if (!isAdmin) {
-      const nowISO = new Date().toISOString();
-      if (user) {
-        try {
-          await axios.post(`/api/users/${user.id}/record-spin`);
-          localStorage.setItem("last_spin_time_cached", nowISO);
-        } catch {
-        }
-      } else {
-        localStorage.setItem("last_spin_time", nowISO);
+    const nowISO = new Date().toISOString();
+    if (user) {
+      // Set localStorage first to prevent interval from re-enabling spin if API fails
+      localStorage.setItem("last_spin_time_cached", nowISO);
+      try {
+        await axios.post(`/api/users/${user.id}/record-spin`);
+      } catch {
       }
-      
-      // Disable spinning and trigger check to start countdown
-      setCanSpin(false);
+    } else {
+      localStorage.setItem("last_spin_time", nowISO);
     }
+    
+    // Disable spinning and trigger check to start countdown
+    setCanSpin(false);
     
     const targetIndex = Math.floor(Math.random() * 6);
     const options = [
@@ -824,7 +817,9 @@ export default function HomePage() {
              {wheelResult ? (
                <div style={{ background: '#f0f0f0', padding: '20px', borderRadius: '12px', marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                  <div>
-                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--gray)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>Your Code:</p>
+                   <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--gray)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>
+                     {wheelResult === "Try again tomorrow" ? "Result:" : "Your Code:"}
+                   </p>
                    <h3 style={{ margin: '4px 0 0 0', color: 'var(--primary)', textAlign: 'center', fontFamily: 'Outfit', fontWeight: 800 }}>{wheelResult}</h3>
                  </div>
                  {["5% off on 500 and above", "Free Squishy", "Free Stickers", "Free Charm"].includes(wheelResult) && (
@@ -847,6 +842,11 @@ export default function HomePage() {
                    >
                      Claim
                    </button>
+                 )}
+                 {!canSpin && (
+                   <div style={{ marginTop: '8px', fontSize: '0.95rem', color: '#555', fontWeight: 'bold', textAlign: 'center' }}>
+                     Next spin available in: <span style={{ color: 'var(--primary)' }}>{spinCountdown}</span>
+                   </div>
                  )}
                </div>
              ) : (
@@ -991,7 +991,7 @@ export default function HomePage() {
           fontFamily: 'Outfit'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.2rem' }}>🎉</span>
+            <span style={{ fontSize: '1.2rem' }}>{canSpin ? '🎉' : '⏳'}</span>
             <button 
               onClick={() => setShowSpinNotification(false)}
               style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '1.05rem', fontWeight: 'bold' }}
@@ -999,30 +999,38 @@ export default function HomePage() {
               ✕
             </button>
           </div>
-          <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--primary)' }}>Daily Spin is Available!</div>
+          <div style={{ fontWeight: 'bold', fontSize: '1rem', color: 'var(--primary)' }}>
+            {canSpin ? "Daily Spin is Available!" : "Daily Spin Locked"}
+          </div>
           <div style={{ fontSize: '0.85rem', color: '#ccc', lineHeight: '1.4' }}>
-            Your free daily spin is ready. Spin the wheel to unlock exclusive discounts and free gifts!
+            {canSpin 
+              ? "Your free daily spin is ready. Spin the wheel to unlock exclusive discounts and free gifts!"
+              : `Next spin available in: ${spinCountdown}`
+            }
           </div>
           <button 
             onClick={() => {
-              setShowWheel(true);
-              setShowSpinNotification(false);
+              if (canSpin) {
+                setShowWheel(true);
+                setShowSpinNotification(false);
+              }
             }}
+            disabled={!canSpin}
             style={{
-              background: 'var(--primary)',
+              background: canSpin ? 'var(--primary)' : '#444',
               color: 'white',
               border: 'none',
               padding: '10px 16px',
               borderRadius: '8px',
               fontWeight: 'bold',
-              cursor: 'pointer',
+              cursor: canSpin ? 'pointer' : 'not-allowed',
               fontSize: '0.85rem',
               textTransform: 'uppercase',
               letterSpacing: '1px',
               textAlign: 'center'
             }}
           >
-            Spin & Save Now
+            {canSpin ? "Spin & Save Now" : "Come back later"}
           </button>
         </div>
       )}
