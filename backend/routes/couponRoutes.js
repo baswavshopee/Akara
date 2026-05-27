@@ -88,6 +88,25 @@ router.post("/claim", async (req, res) => {
     }
 });
 
+// PUBLIC: Get active general coupons
+router.get("/public", async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from("coupons")
+            .select("*")
+            .eq("is_active", true)
+            .gte("expiry_date", new Date().toISOString())
+            .order("created_at", { ascending: false });
+        
+        if (error) throw error;
+        // Filter out spin wheel unique codes (they contain a hyphen)
+        const generalCoupons = data.filter(c => !c.code.includes("-"));
+        res.json(generalCoupons);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // ADMIN: List all coupons
 router.get("/", async (_, res) => {
     try {
