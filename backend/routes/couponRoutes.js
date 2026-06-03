@@ -64,8 +64,8 @@ router.post("/claim", async (req, res) => {
         const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
         const uniqueCode = `${code.toUpperCase()}-${randomSuffix}`;
         
-        // Expiry is 2 days from now
-        const expiryDate = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+        // Expiry matches spin cooldown (30 days)
+        const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
         // Bypassing the coupons_discount_percent_check (discount_percent > 0) DB constraint:
         // Set discount_percent to 1 for physical free gifts (which are ₹0 anyway), and validate overrides it to 0.
@@ -83,14 +83,12 @@ router.post("/claim", async (req, res) => {
 
         if (error) {
             console.error("Supabase coupon insert error:", JSON.stringify(error, null, 2));
-            return res.status(500).json({
-                error: error.message || error.hint || error.details || JSON.stringify(error)
-            });
+            throw error;
         }
         res.status(201).json({ success: true, code: uniqueCode, expiryDate });
     } catch (err) {
-        console.error("Coupon claim route error:", err.message, err.stack);
-        res.status(500).json({ error: err.message || err.toString() });
+        console.error("Coupon claim route error:", err.message);
+        res.status(500).json({ error: "Failed to claim coupon" });
     }
 });
 

@@ -140,7 +140,10 @@ export default function CheckoutPage() {
     try {
       const { data: orderData } = await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/api/payment/create-order`,
-        { amount: finalTotal }
+        {
+          items: cart.map((item) => ({ _id: item._id, qty: item.qty })),
+          couponCode: appliedCoupon ? appliedCoupon.code : null,
+        }
       );
 
       const options = {

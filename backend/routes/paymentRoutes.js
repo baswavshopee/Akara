@@ -2,13 +2,75 @@ const express = require("express");
 const crypto = require("crypto");
 const Razorpay = require("razorpay");
 const router = express.Router();
+const supabase = require("../config/supabase");
 
-// BUG-03: Fail early if Razorpay keys are missing
 const KEY_ID = process.env.RAZORPAY_KEY_ID;
 const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
 if (!KEY_ID || !KEY_SECRET) {
   console.error("FATAL: RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be set in .env");
+}
+
+const TAX_RATE = 0.10;
+const SHIPPING_COST = 60;
+const FREE_SHIPPING_THRESHOLD = 500;
+
+// Coupon codes that give 0% actual discount (free physical gifts tracked via coupon code only)
+const FREE_GIFT_PREFIXES = ["FREESQUISHY", "FREESTICKERS", "FREECHARM"];
+
+async function computeTotal(items, couponCode) {
+  // Separate real products from spin-wheel free gifts (IDs like "free-gift-charm")
+  const realItems = (items || []).filter(
+    (i) => !String(i._id || i.productId || "").startsWith("free-gift-")
+  );
+
+  let subtotal = 0;
+
+  if (realItems.length > 0) {
+    const ids = realItems.map((i) => i._id || i.productId).filter(Boolean);
+    const { data: dbProducts, error } = await supabase
+      .from("products")
+      .select("id, price, in_stock")
+      .in("id", ids);
+
+    if (error) throw new Error("Failed to fetch product prices");
+
+    const priceMap = {};
+    (dbProducts || []).forEach((p) => { priceMap[p.id] = parseFloat(p.price); });
+
+    for (const item of realItems) {
+      const id = item._id || item.productId;
+      const dbPrice = priceMap[id];
+      if (dbPrice === undefined) throw new Error(`Product not found: ${id}`);
+      subtotal += dbPrice * (item.qty || 1);
+    }
+  }
+
+  const shipping = subtotal > 0 && subtotal < FREE_SHIPPING_THRESHOLD ? SHIPPING_COST : 0;
+  const tax = subtotal * TAX_RATE;
+
+  let discount = 0;
+  if (couponCode) {
+    const upper = couponCode.toUpperCase();
+    const isFreeGift = FREE_GIFT_PREFIXES.some((p) => upper.startsWith(p));
+    if (!isFreeGift) {
+      // Lookup real discount in DB
+      const { data: coupon } = await supabase
+        .from("coupons")
+        .select("discount_percent")
+        .eq("code", upper)
+        .eq("is_active", true)
+        .gt("expiry_date", new Date().toISOString())
+        .maybeSingle();
+
+      if (coupon) {
+        discount = (subtotal * coupon.discount_percent) / 100;
+      }
+    }
+  }
+
+  const total = Math.max(subtotal + shipping + tax - discount, 0);
+  return Math.round(total * 100) / 100; // round to 2 decimal places
 }
 
 router.post("/create-order", async (req, res) => {
@@ -17,15 +79,21 @@ router.post("/create-order", async (req, res) => {
   }
 
   try {
-    const { amount } = req.body;
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ error: "Invalid order amount" });
+    const { items, couponCode } = req.body;
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Cart items are required" });
+    }
+
+    const verifiedTotal = await computeTotal(items, couponCode);
+
+    if (verifiedTotal <= 0) {
+      return res.status(400).json({ error: "Order total must be greater than zero" });
     }
 
     const instance = new Razorpay({ key_id: KEY_ID, key_secret: KEY_SECRET });
-
     const order = await instance.orders.create({
-      amount: Math.round(amount * 100),
+      amount: Math.round(verifiedTotal * 100),
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     });
@@ -34,9 +102,9 @@ router.post("/create-order", async (req, res) => {
       return res.status(500).json({ error: "Failed to create Razorpay order" });
     }
 
-    res.json({ order, key: KEY_ID });
+    res.json({ order, key: KEY_ID, verifiedTotal });
   } catch (error) {
-    console.error("Razorpay Error:", error);
+    console.error("Razorpay Error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });

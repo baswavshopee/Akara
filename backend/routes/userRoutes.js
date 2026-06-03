@@ -48,8 +48,18 @@ router.post('/invite', requireAdmin, async (req, res) => {
   res.json({ success: true, userId: data.user?.id });
 });
 
+async function requireSelf(req, res, next) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token provided' });
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return res.status(401).json({ error: 'Invalid token' });
+  if (user.id !== req.params.userId) return res.status(403).json({ error: 'Forbidden' });
+  req.user = user;
+  next();
+}
+
 // GET /api/users/:userId/spin-status
-router.get('/:userId/spin-status', async (req, res) => {
+router.get('/:userId/spin-status', requireSelf, async (req, res) => {
   try {
     const { data: { user }, error } = await supabase.auth.admin.getUserById(req.params.userId);
     if (error || !user) throw error || new Error('User not found');
@@ -61,7 +71,7 @@ router.get('/:userId/spin-status', async (req, res) => {
 });
 
 // POST /api/users/:userId/record-spin
-router.post('/:userId/record-spin', async (req, res) => {
+router.post('/:userId/record-spin', requireSelf, async (req, res) => {
   try {
     const { data, error } = await supabase.auth.admin.updateUserById(
       req.params.userId,
@@ -75,8 +85,8 @@ router.post('/:userId/record-spin', async (req, res) => {
   }
 });
 
-// POST /api/users/:userId/reset-spin
-router.post('/:userId/reset-spin', async (req, res) => {
+// POST /api/users/:userId/reset-spin (admin only — prevents self-reset abuse)
+router.post('/:userId/reset-spin', requireAdmin, async (req, res) => {
   try {
     const { data, error } = await supabase.auth.admin.updateUserById(
       req.params.userId,

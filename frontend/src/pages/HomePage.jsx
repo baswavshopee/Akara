@@ -290,7 +290,7 @@ export default function HomePage() {
       "5% off on 500 and above",
       "Spin Again",
       "Free Charm",
-      "Try again tomorrow",
+      "Try again next month",
       "Free Squishy",
       "Free Stickers"
     ];
@@ -790,7 +790,7 @@ export default function HomePage() {
                 { label: "5% off on 500 and above", color: "var(--primary)" },
                 { label: "Spin Again", color: "#222222" },
                 { label: "Free Charm", color: "var(--primary)" },
-                { label: "Try again tomorrow", color: "#1a1a1a" }
+                { label: "Try again next month", color: "#1a1a1a" }
               ].map((seg, i) => (
                 <div key={`bg-${i}`} className="wheel-segment" style={{ 
                   transform: `rotate(${i * 60}deg) skewY(-30deg)`,
@@ -805,7 +805,7 @@ export default function HomePage() {
                 { label: "5% off on 500 and above", color: "var(--primary)" },
                 { label: "Spin Again", color: "#222222" },
                 { label: "Free Charm", color: "var(--primary)" },
-                { label: "Try again tomorrow", color: "#1a1a1a" }
+                { label: "Try again next month", color: "#1a1a1a" }
               ].map((seg, i) => (
                 <div key={`txt-${i}`} className="wheel-segment" style={{ 
                   transform: `rotate(${i * 60}deg) skewY(-30deg)`,
@@ -820,7 +820,7 @@ export default function HomePage() {
                <div style={{ background: '#f0f0f0', padding: '20px', borderRadius: '12px', marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                  <div>
                    <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--gray)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', textAlign: 'center' }}>
-                     {wheelResult === "Try again tomorrow" ? "Result:" : "Your Code:"}
+                     {wheelResult === "Try again next month" ? "Result:" : "Your Code:"}
                    </p>
                    <h3 style={{ margin: '4px 0 0 0', color: 'var(--primary)', textAlign: 'center', fontFamily: 'Outfit', fontWeight: 800 }}>{wheelResult}</h3>
                  </div>

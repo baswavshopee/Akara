@@ -64,7 +64,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payment", sensitiveLimiter, paymentRoutes);
 app.use("/api/coupons", sensitiveLimiter, couponRoutes);
-app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/newsletter", sensitiveLimiter, newsletterRoutes);
 app.use("/api/mystery-boxes", mysteryBoxRoutes);
 
 app.get("/", (_, res) => res.json({ message: "Akara API running" }));
