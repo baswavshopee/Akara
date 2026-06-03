@@ -142,7 +142,7 @@ export default function CheckoutPage() {
       const { data: orderData } = await axios.post(
         `${import.meta.env.VITE_API_URL || ""}/api/payment/create-order`,
         {
-          items: cart.map((item) => ({ _id: item._id, qty: item.qty })),
+          items: cart.map((item) => ({ _id: item._id, qty: item.qty, price: item.price })),
           couponCode: appliedCoupon ? appliedCoupon.code : null,
         }
       );
@@ -229,7 +229,8 @@ export default function CheckoutPage() {
       rzp1.open();
     } catch (err) {
       console.error("Error initiating Razorpay checkout:", err);
-      alert("Failed to initiate payment. Please try again.");
+      const msg = err?.response?.data?.error || err?.message || "Unknown error";
+      alert(`Failed to initiate payment: ${msg}`);
     } finally {
       processingRef.current = false;
       setIsProcessing(false);

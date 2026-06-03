@@ -75,9 +75,6 @@ export default function AdminPage() {
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState(emptyEvent);
 
-  // User/Invite
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
 
   const flash = (m) => {
     setMsg(m);
@@ -254,19 +251,6 @@ export default function AdminPage() {
       flash(`User role updated to ${newRole}`);
       loadUsers();
     } catch { flash("Error updating role"); }
-  };
-
-  const sendInvite = async () => {
-    if (!inviteEmail) return;
-    setSaving(true);
-    try {
-      const headers = await authHeaders();
-      await axios.post("/api/users/invite", { email: inviteEmail }, { headers });
-      flash("Invite sent to " + inviteEmail);
-      setShowInviteModal(false);
-      setInviteEmail("");
-    } catch { flash("Error sending invite"); }
-    setSaving(false);
   };
 
   const saveCoupon = async () => {
@@ -532,9 +516,6 @@ export default function AdminPage() {
         {/* ── Users Tab ── */}
         {tab === "users" && (
           <div>
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
-              <button className="btn btn-primary" onClick={() => setShowInviteModal(true)}>+ Invite User</button>
-            </div>
             <div style={{ overflowX: "auto" }}>
               <table style={{
                 width: "100%", borderCollapse: "collapse", background: "var(--card-bg)",
@@ -1052,40 +1033,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ── Invite Modal ── */}
-      {showInviteModal && (
-        <div style={overlayStyle} onClick={() => setShowInviteModal(false)}>
-          <div style={{ ...modalStyle, maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontFamily: "Outfit", fontWeight: 800, color: "var(--dark)", marginBottom: 12 }}>
-              Invite Admin
-            </h2>
-            <p style={{ color: "var(--gray)", fontSize: "0.9rem", marginBottom: 24 }}>
-              Enter the email address of the person you want to invite as an admin. They will receive an invitation link.
-            </p>
-            <div style={fieldWrap}>
-              <label style={labelStyle}>Email Address</label>
-              <input
-                style={inputStyle}
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="admin@akaraboutique.com"
-              />
-            </div>
-            <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 24 }}>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                style={{ ...actionBtn, background: "#eee", color: "#333", padding: "10px 24px" }}
-              >
-                Cancel
-              </button>
-              <button className="btn btn-primary" onClick={sendInvite} disabled={saving || !inviteEmail}>
-                {saving ? "Sending…" : "Send Invite"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Coupon Modal ── */}
       {showCouponModal && (

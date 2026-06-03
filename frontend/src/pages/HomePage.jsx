@@ -536,7 +536,9 @@ export default function HomePage() {
           <div style={{ marginBottom: '10px' }}><span style={{ fontSize: '1.2rem', color: 'var(--primary)', fontWeight: 900 }}>秘密</span></div>
           <h2 style={{ fontSize: '3rem', fontFamily: 'Outfit', fontWeight: 800, margin: '20px 0', textShadow: '0 0 15px rgba(var(--primary-rgb), 0.4)', color: 'white' }}>The Akara <span>Mystery Box</span></h2>
           <p style={{ maxWidth: '700px', margin: '0 auto 40px', opacity: 0.8, fontSize: '1.1rem', color: 'white', lineHeight: '1.6' }}>Discover the thrill of surprise with our curated Mystery Boxes available in ₹499, ₹999, and ₹1499 variants — each packed with collectibles and goodies worth more than what you pay for. From stickers and badges to charms, posters, bookmarks, magnets, figurines, and exclusive extras, every box is designed to feel personal, exciting, and unique.</p>
-          <button className="btn btn-white-pill anime-btn-glow" onClick={() => setShowMysteryModal(true)}>Unlock your Mystery Box</button>
+          <button className="btn btn-white-pill anime-btn-glow" onClick={() => user ? setShowMysteryModal(true) : navigate("/login")}>
+            {user ? "Unlock your Mystery Box" : "Sign In to Unlock Mystery Box"}
+          </button>
         </div>
       </section>
 
@@ -739,8 +741,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Spin the Wheel Trigger */}
-      <div className="spin-trigger" onClick={() => setShowWheel(true)}>🎡</div>
+      {/* Spin the Wheel Trigger — logged-in users only */}
+      {user && <div className="spin-trigger" onClick={() => setShowWheel(true)}>🎡</div>}
 
       {/* Spin the Wheel Modal */}
       {showWheel && (
@@ -833,8 +835,8 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Mystery Box Modal */}
-      {showMysteryModal && (
+      {/* Mystery Box Modal — logged-in only */}
+      {showMysteryModal && user && (
         <div className="wheel-modal" onClick={() => setShowMysteryModal(false)}>
           <div className="wheel-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', textAlign: 'left', padding: '40px 30px', maxHeight: '90vh', overflowY: 'auto' }}>
             <button style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }} onClick={() => setShowMysteryModal(false)}>×</button>
@@ -852,11 +854,11 @@ export default function HomePage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Your Name *</label>
-                    <input type="text" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryName} onChange={(e) => setMysteryName(e.target.value)} required />
+                    <input type="text" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryName || user?.user_metadata?.full_name || ""} onChange={(e) => setMysteryName(e.target.value)} required />
                   </div>
                   <div>
                     <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Email Address *</label>
-                    <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryEmail} onChange={(e) => setMysteryEmail(e.target.value)} required />
+                    <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem', background: 'var(--gray-light)' }} value={mysteryEmail || user?.email || ""} onChange={(e) => setMysteryEmail(e.target.value)} readOnly />
                   </div>
                 </div>
 

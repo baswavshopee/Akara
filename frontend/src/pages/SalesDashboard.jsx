@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 const STATUS_COLORS = {
   pending:    { bg: "#fff7ed", color: "#c05621", label: "Pending" },
@@ -319,6 +320,8 @@ export default function SalesDashboard({ getToken }) {
   const [chartMode, setChartMode] = useState("revenue");
   const [error, setError] = useState("");
 
+  const { showToast } = useToast();
+
   const authHeaders = async () => {
     const token = await getToken();
     return { Authorization: `Bearer ${token}` };
@@ -354,8 +357,9 @@ export default function SalesDashboard({ getToken }) {
       setOrders((prev) =>
         prev.map((o) => (o._id === orderId ? { ...o, status: newStatus } : o))
       );
+      showToast(`Order status updated to ${STATUS_COLORS[newStatus]?.label || newStatus}`);
     } catch {
-      // silently fail
+      showToast("Failed to update order status. Please try again.");
     }
   };
 

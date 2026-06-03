@@ -26,7 +26,6 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [activeThumb, setActiveThumb] = useState(0);
-  const [isGifting, setIsGifting] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -243,30 +242,6 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Premium Gifting Option */}
-            <div style={{
-              margin: '30px 0',
-              padding: '20px',
-              background: 'var(--bg-alt)',
-              borderRadius: '16px',
-              border: '1px dashed var(--primary)'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '1.5rem' }}>🎁</span>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text)' }}>Premium Gift Wrapping</h4>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Handwritten note & signature box (+₹49)</p>
-                  </div>
-                </div>
-                <input 
-                  type="checkbox" 
-                  checked={isGifting} 
-                  onChange={(e) => setIsGifting(e.target.checked)}
-                  style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-                />
-              </div>
-            </div>
 
             {/* Live Customizer Teaser */}
             <div 

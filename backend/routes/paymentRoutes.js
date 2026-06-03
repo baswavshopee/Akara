@@ -40,9 +40,10 @@ async function computeTotal(items, couponCode) {
 
     for (const item of realItems) {
       const id = item._id || item.productId;
+      // Use DB price if found (tamper-proof); fall back to cart price for custom/unlisted items
       const dbPrice = priceMap[id];
-      if (dbPrice === undefined) throw new Error(`Product not found: ${id}`);
-      subtotal += dbPrice * (item.qty || 1);
+      const price = dbPrice !== undefined ? dbPrice : parseFloat(item.price || 0);
+      subtotal += price * (item.qty || 1);
     }
   }
 
