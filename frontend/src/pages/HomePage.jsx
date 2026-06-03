@@ -472,13 +472,11 @@ export default function HomePage() {
 
       {/* As Seen On / Partners */}
       <section className="reveal" style={{ padding: '40px 0', borderBottom: '1px solid var(--border)' }}>
-        <p style={{ textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--gray)', marginBottom: '25px', fontWeight: 700 }}>As Featured In & Partnered With</p>
+        <p style={{ textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--gray)', marginBottom: '25px', fontWeight: 700 }}>As Seen In</p>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '60px', flexWrap: 'wrap', opacity: 0.4, filter: 'grayscale(1)' }}>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>VOGUE</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>GQ</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>ELLE</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>DESIGNER'S HUB</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>VINTAGE CO.</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>LA LA LAND FLEA</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>THE MARKETPLACE</span>
+          <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>VINTERBASH</span>
         </div>
       </section>
 
@@ -547,7 +545,7 @@ export default function HomePage() {
         <div className="section-header" style={{ textAlign: 'center', marginBottom: '50px' }}>
           <div style={{ marginBottom: '8px' }}><span style={{ fontSize: '1.1rem', color: 'var(--primary)', fontWeight: 800, letterSpacing: '4px' }}>証</span></div>
           <h2 className="section-title">The Akara <span>Gallery</span></h2>
-          <p style={{ color: 'var(--gray)' }}>Join 50,000+ collectors sharing their memories. Tag @AkaraKeepsakes to be featured.</p>
+          <p style={{ color: 'var(--gray)' }}>Join 1,000+ collectors sharing their keepsakes. Tag @my__akara to get featured.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
           {[
@@ -595,36 +593,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Collection Row */}
-      <div className="visit-collections-row reveal" onClick={() => navigate("/shop")}>
-        <div className="pill box-img">
-          <img src="https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=400&q=80" alt="Badges" />
-          <span>VISIT OUR</span>
-        </div>
-        <div className="pill box-outlined">COLLECTIONS</div>
-        <div className="pill box-solid"><span className="arrow">→</span></div>
-      </div>
-
-
-      {/* Campaigns Bento Grid */}
-      <section className="bento-grid reveal">
-          <div className="bento-right" style={{ width: '100%' }}>
-            <Link to="/shop" className="bento-right-top">
-              <img src="https://images.unsplash.com/photo-1544816155-12df9643f363?w=1600&q=80" alt="Vintage" className="bento-img" />
-              <div className="bento-overlay"><h2>VINTAGE CAPSULE</h2></div>
-            </Link>
-            <div className="bento-right-bottom">
-              <Link to="/shop" className="bento-item">
-                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&q=80" alt="Art" className="bento-img" />
-                <div className="bento-overlay"><h2 style={{ fontSize: '1.5rem' }}>ART MAGNETS</h2></div>
-              </Link>
-              <Link to="/category/Plaques" className="bento-item">
-                <img src="https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=800&q=80" alt="Wooden" className="bento-img" />
-                <div className="bento-overlay"><h2 style={{ fontSize: '1.5rem' }}>WOODEN CARDS</h2></div>
-              </Link>
-            </div>
-          </div>
-      </section>
 
       {/* FAQ Section */}
       <section className="faq-section reveal">

@@ -121,6 +121,8 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 router.post("/:id/apply", async (req, res) => {
   try {
     const { name, email, message } = req.body;
+    if (!name || !email) return res.status(400).json({ message: "Name and email are required" });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: "Valid email is required" });
     const { data: event } = await supabase.from("events").select("id").eq("id", req.params.id).single();
     if (!event) return res.status(404).json({ message: "Event not found" });
 

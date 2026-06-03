@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useCart } from "../context/CartContext";
@@ -20,6 +20,7 @@ export default function CheckoutPage() {
 
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
 
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
@@ -133,8 +134,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    // BUG-08 / BUG-19: prevent double-submit
-    if (isProcessing) return;
+    if (processingRef.current) return;
+    processingRef.current = true;
     setIsProcessing(true);
 
     try {
@@ -230,6 +231,7 @@ export default function CheckoutPage() {
       console.error("Error initiating Razorpay checkout:", err);
       alert("Failed to initiate payment. Please try again.");
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
     }
   }

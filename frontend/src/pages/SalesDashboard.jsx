@@ -329,16 +329,16 @@ export default function SalesDashboard({ getToken }) {
     setError("");
     try {
       const headers = await authHeaders();
-      const [summaryRes, chartRes, topRes, ordersRes] = await Promise.all([
+      const [summaryRes, chartRes, topRes, ordersRes] = await Promise.allSettled([
         axios.get("/api/orders/sales/summary", { headers }),
         axios.get("/api/orders/sales/chart", { headers }),
         axios.get("/api/orders/sales/top-products", { headers }),
         axios.get("/api/orders", { headers }),
       ]);
-      setSummary(summaryRes.data);
-      setChartData(chartRes.data);
-      setTopProducts(topRes.data);
-      setOrders(ordersRes.data);
+      if (summaryRes.status === "fulfilled") setSummary(summaryRes.value.data);
+      if (chartRes.status === "fulfilled") setChartData(chartRes.value.data);
+      if (topRes.status === "fulfilled") setTopProducts(topRes.value.data);
+      if (ordersRes.status === "fulfilled") setOrders(ordersRes.value.data);
     } catch {
       setError("Failed to load sales data. Make sure the orders table exists in Supabase.");
     }
