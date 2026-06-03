@@ -473,7 +473,7 @@ export default function HomePage() {
       {/* As Seen On / Partners */}
       <section className="reveal" style={{ padding: '40px 0', borderBottom: '1px solid var(--border)' }}>
         <p style={{ textAlign: 'center', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '3px', color: 'var(--gray)', marginBottom: '25px', fontWeight: 700 }}>As Seen In</p>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '60px', flexWrap: 'wrap', opacity: 0.4, filter: 'grayscale(1)' }}>
+        <div className="partners-logos" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '60px', flexWrap: 'wrap', opacity: 0.4, filter: 'grayscale(1)' }}>
           <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>LA LA LAND FLEA</span>
           <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>THE MARKETPLACE</span>
           <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Outfit', color: 'var(--text)' }}>VINTERBASH</span>
@@ -481,8 +481,8 @@ export default function HomePage() {
       </section>
 
       {/* Summer Capsule Section */}
-      <section className="reveal" style={{ 
-        padding: '100px 32px', 
+      <section className="reveal summer-capsule-section" style={{
+        padding: '100px 32px',
         backgroundImage: 'linear-gradient(var(--glass-bg), var(--glass-bg)), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1600&q=80")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
