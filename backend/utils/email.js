@@ -1,4 +1,5 @@
-const nodemailer = require("nodemailer");
+let nodemailer;
+try { nodemailer = require("nodemailer"); } catch { /* optional dep */ }
 
 // Graceful no-op if SMTP is not configured
 const SMTP_HOST = process.env.SMTP_HOST;
@@ -8,7 +9,7 @@ const FROM_NAME = process.env.EMAIL_FROM_NAME || "Akara";
 const FROM_ADDR = process.env.EMAIL_FROM_ADDR || SMTP_USER;
 
 let transporter = null;
-if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+if (nodemailer && SMTP_HOST && SMTP_USER && SMTP_PASS) {
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || "587"),

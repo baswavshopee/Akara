@@ -19,10 +19,10 @@ const supabase = require("./config/supabase");
 
 const app = express();
 
-// Trust Vercel's proxy so express-rate-limit reads the real client IP
+// Trust Nginx reverse proxy so express-rate-limit reads the real client IP
 app.set("trust proxy", 1);
 
-// Restrict CORS to known origins
+// Restrict CORS to known origins (set ALLOWED_ORIGINS in .env)
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
   .split(",")
   .map((o) => o.trim());
@@ -30,10 +30,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow no-origin requests (Postman, server-to-server, same-origin Vercel)
       if (!origin) return callback(null, true);
-      // Allow any vercel.app subdomain (handles preview deployments too)
-      if (origin.endsWith(".vercel.app")) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
     },
@@ -85,14 +82,9 @@ async function deleteExpiredEvents() {
   if (error) console.error("Event cleanup error:", error.message);
 }
 
-if (process.env.NODE_ENV !== "production") {
-  app.listen(process.env.PORT || 5000, () => {
-    console.log(`Server running on http://localhost:${process.env.PORT || 5000}`);
-    deleteExpiredEvents();
-    setInterval(deleteExpiredEvents, 60 * 60 * 1000);
-  });
-} else {
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
   deleteExpiredEvents();
-}
-
-module.exports = app;
+  setInterval(deleteExpiredEvents, 60 * 60 * 1000);
+});
