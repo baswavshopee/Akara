@@ -73,6 +73,12 @@ app.use("/api/newsletter", sensitiveLimiter, newsletterRoutes);
 app.use("/api/mystery-boxes", mysteryBoxRoutes);
 app.use("/api/products/:id/reviews", reviewRoutes);
 
+// Global error handler — must return JSON so the frontend can read the message
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err.message);
+  res.status(500).json({ error: err.message || "Internal server error" });
+});
+
 // Serve built React frontend (built into backend/public by vite)
 const publicPath = path.join(__dirname, "public");
 app.use(express.static(publicPath));
