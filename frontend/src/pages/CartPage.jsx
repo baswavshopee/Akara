@@ -16,13 +16,33 @@ export default function CartPage() {
     <div className="page" style={{ paddingTop: '80px', minHeight: '80vh' }}>
       <style>{`
         @media (max-width: 768px) {
-          .cart-item-row {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 16px !important;
+          .cart-page-grid {
+            grid-template-columns: 1fr !important;
+            gap: 32px !important;
           }
-          .cart-item-row > div { text-align: left !important; }
-          .cart-item-row > div:last-child { text-align: left !important; font-size: 1rem !important; }
+          .cart-items-header { display: none !important; }
+          .cart-order-summary {
+            position: static !important;
+            padding: 24px !important;
+          }
+          .cart-item-row {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .cart-item-row .cart-item-meta {
+            flex-direction: row !important;
+            gap: 14px !important;
+          }
+          .cart-item-row .cart-item-meta img {
+            width: 72px !important;
+            height: 72px !important;
+          }
+          .cart-item-row .cart-item-controls {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding-top: 8px !important;
+          }
         }
       `}</style>
       <div className="main-content">
@@ -53,25 +73,26 @@ export default function CartPage() {
 
               {cart.map((item) => (
                 <div key={item._id} className="cart-page-item cart-item-row" style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1fr 1fr', gap: '20px', alignItems: 'center', paddingBottom: '32px', marginBottom: '32px', borderBottom: '1px solid var(--gray-light)' }}>
-                  
+
                   {/* Product Info */}
-                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-                    <img src={item.image} alt={item.name} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} />
+                  <div className="cart-item-meta" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <img src={item.image} alt={item.name} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
                     <div>
-                      <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', color: 'var(--dark)' }}>{item.name}</h3>
-                      <button onClick={() => { removeFromCart(item._id); showToast("Item removed"); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' }}>Remove</button>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: '8px', color: 'var(--dark)' }}>{item.name}</h3>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--gray)', marginBottom: '6px' }}>₹{item.price.toFixed(2)} each</p>
+                      <button onClick={() => { removeFromCart(item._id); showToast("Item removed"); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.85rem', textDecoration: 'underline', padding: 0 }}>Remove</button>
                     </div>
                   </div>
 
-                  {/* Price */}
+                  {/* Price — hidden on mobile (shown inline above) */}
                   <div style={{ textAlign: 'center', fontSize: '1.1rem', color: 'var(--dark)' }}>
                     ₹{item.price.toFixed(2)}
                   </div>
 
-                  {/* Quantity */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                  {/* Quantity + Total row on mobile */}
+                  <div className="cart-item-controls" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <button onClick={() => updateQty(item._id, -1)} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--dark)', background: 'transparent', cursor: 'pointer', color: 'var(--dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>−</button>
-                    <span style={{ fontWeight: '700', fontSize: '1.1rem' }}>{item.qty}</span>
+                    <span style={{ fontWeight: '700', fontSize: '1.1rem', minWidth: '20px', textAlign: 'center' }}>{item.qty}</span>
                     <button onClick={() => !item.isFreeGift && updateQty(item._id, 1)} disabled={item.isFreeGift} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '1px solid var(--dark)', background: 'transparent', cursor: item.isFreeGift ? 'not-allowed' : 'pointer', color: item.isFreeGift ? 'var(--gray)' : 'var(--dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', opacity: item.isFreeGift ? 0.4 : 1 }}>+</button>
                   </div>
 

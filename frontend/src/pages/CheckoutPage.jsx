@@ -265,8 +265,34 @@ export default function CheckoutPage() {
     <div className="page" style={{ paddingTop: "80px", minHeight: "80vh" }}>
       <style>{`
         @media (max-width: 768px) {
-          .checkout-form-row { display: flex !important; flex-direction: column !important; gap: 16px !important; }
-          .checkout-summary { position: static !important; top: auto !important; padding: 24px !important; }
+          .checkout-grid {
+            grid-template-columns: 1fr !important;
+            gap: 24px !important;
+          }
+          .checkout-grid > form { order: 2; }
+          .checkout-summary {
+            order: 1;
+            position: static !important;
+            top: auto !important;
+            padding: 20px !important;
+          }
+          .checkout-form-row {
+            grid-template-columns: 1fr !important;
+            gap: 16px !important;
+          }
+          .checkout-coupon-row {
+            flex-direction: row !important;
+            gap: 8px !important;
+          }
+          .checkout-coupon-row input { font-size: 0.85rem !important; padding: 10px !important; }
+          .checkout-coupon-row button { padding: 0 14px !important; font-size: 0.75rem !important; white-space: nowrap; }
+          .checkout-item-row img { width: 48px !important; height: 48px !important; }
+          .checkout-item-row .item-name { font-size: 0.85rem !important; }
+          .checkout-item-row .item-price { font-size: 0.85rem !important; }
+        }
+        @media (max-width: 480px) {
+          .checkout-grid { gap: 16px !important; }
+          .checkout-summary { padding: 16px !important; }
         }
       `}</style>
       <div className="main-content">
@@ -274,7 +300,7 @@ export default function CheckoutPage() {
           Check<span className="italic">out</span>
         </h1>
 
-        <div className="checkout-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "60px", alignItems: "start" }}>
+        <div className="checkout-grid" style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "60px", alignItems: "start", flexDirection: "column" }}>
           {/* Left: Delivery Details Form */}
           <form onSubmit={handleSubmit} noValidate>
             <h2 style={{ fontSize: "1.3rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "28px", color: "var(--dark)" }}>
@@ -363,20 +389,20 @@ export default function CheckoutPage() {
 
             <div style={{ marginBottom: "24px" }}>
               {cart.map((item) => (
-                <div key={item._id} style={{ display: "flex", gap: "14px", alignItems: "center", marginBottom: "16px" }}>
+                <div key={item._id} className="checkout-item-row" style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "14px" }}>
                   <img src={item.image} alt={item.name} style={{ width: "60px", height: "60px", objectFit: "cover", borderRadius: "4px", flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "700", fontSize: "0.95rem", color: "var(--dark)", marginBottom: "4px" }}>{item.name}</div>
-                    <div style={{ fontSize: "0.85rem", color: "var(--gray)" }}>Qty: {item.qty}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="item-name" style={{ fontWeight: "700", fontSize: "0.9rem", color: "var(--dark)", marginBottom: "3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</div>
+                    <div style={{ fontSize: "0.82rem", color: "var(--gray)" }}>Qty: {item.qty}</div>
                   </div>
-                  <div style={{ fontWeight: "700", color: "var(--dark)", whiteSpace: "nowrap" }}>₹{(item.price * item.qty).toFixed(2)}</div>
+                  <div className="item-price" style={{ fontWeight: "700", color: "var(--dark)", whiteSpace: "nowrap", fontSize: "0.9rem" }}>₹{(item.price * item.qty).toFixed(2)}</div>
                 </div>
               ))}
             </div>
 
             {/* Coupon Section */}
             <div style={{ marginBottom: "24px", padding: "20px 0", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="checkout-coupon-row" style={{ display: "flex", gap: "10px" }}>
                 <input
                   placeholder="Coupon Code"
                   value={couponCode}
