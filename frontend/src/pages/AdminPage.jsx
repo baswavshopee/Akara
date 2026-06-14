@@ -249,7 +249,7 @@ export default function AdminPage() {
     try {
       const headers = await authHeaders();
       const newRole = u.role === "admin" ? "user" : "admin";
-      await axios.put(`/api/users/${u._id}/role`, { role: newRole }, { headers });
+      await axios.put(`/api/users/${u.id}/role`, { role: newRole }, { headers });
       flash(`User role updated to ${newRole}`);
       loadUsers();
     } catch { flash("Error updating role"); }
@@ -534,7 +534,7 @@ export default function AdminPage() {
                 </thead>
                 <tbody>
                   {users.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((u) => (
-                    <tr key={u._id}>
+                    <tr key={u.id}>
                       <td style={tdStyle}>{u.name}</td>
                       <td style={tdStyle}>{u.email}</td>
                       <td style={tdStyle}>
