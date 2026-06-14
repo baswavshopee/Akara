@@ -145,7 +145,7 @@ export default function HomePage() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelResult, setWheelResult] = useState(null);
 
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const { addToCart } = useCart();
   const [canSpin, setCanSpin] = useState(true);
   const [spinCountdown, setSpinCountdown] = useState("");
@@ -430,7 +430,7 @@ export default function HomePage() {
                   <h1 className="elegant-title">{slide.title} your <br/><span className="italic">{slide.subtitle.toLowerCase()}</span></h1>
                   <p className="hero-desc">{slide.desc}</p>
                   <Link 
-                    to="/shop" 
+                    to={`/category/${slide.subtitle}`} 
                     className="btn-white-pill" 
                     onMouseMove={handleMagnetic} 
                     onMouseLeave={resetMagnetic} 
@@ -519,7 +519,7 @@ export default function HomePage() {
           </div>
           <div className="hero-img-side">
             <img 
-              src="https://qbjlbtdwiqvmsovbfpgf.supabase.co/storage/v1/object/sign/akara-assests/hero_lifestyle_premium_1777994217967.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8zOTI5NWVlYi04ZWVmLTQwMjYtYTQzNS05ODI5ZWM1Y2QwNTgiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJha2FyYS1hc3Nlc3RzL2hlcm9fbGlmZXN0eWxlX3ByZW1pdW1fMTc3Nzk5NDIxNzk2Ny5wbmciLCJpYXQiOjE3Nzc5OTQyNTAsImV4cCI6NDkzMTU5NDI1MH0.WjYQ3_56W-y9I2u0-q1a-0Z9K_C8O3T2U7C9J5V6X_U" 
+              src="https://images.unsplash.com/photo-1506806732259-39c2d0268443?w=1200&q=80" 
               alt="Premium Lifestyle" 
               style={{ transform: `scale(1.1) translate(${mousePos.x}px, ${mousePos.y}px)` }}
             />
@@ -549,7 +549,7 @@ export default function HomePage() {
           <h2 className="section-title">The Akara <span>Gallery</span></h2>
           <p style={{ color: 'var(--gray)' }}>Join 1,000+ collectors sharing their keepsakes. Tag @my__akara to get featured.</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+        <div className="gallery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
           {[
             "https://images.unsplash.com/photo-1513519245088-0e12902e35a6?w=600&q=80",
             "https://images.unsplash.com/photo-1566121933407-3c7ccdd26763?w=600&q=80",
@@ -702,7 +702,7 @@ export default function HomePage() {
             <h2>From the <span>Founders'</span> Desk</h2>
             <p>Akara was born in a small studio with big dreams. Our passion for handcrafted detail has led us on an incredible journey across the country.</p>
             <p>Every poster, sticker, and keepsake is made with utmost care and attention to detail. Most importantly, there is lots of love behind Akara.</p>
-            <button className="btn btn-outline" style={{ borderColor: 'white', color: 'white', marginTop: '20px' }} onClick={() => navigate("/shop")}>Our Story</button>
+            <button className="btn btn-outline-white" style={{ marginTop: '20px' }} onClick={() => navigate("/shop")}>Our Story</button>
           </div>
         </div>
       </section>
@@ -943,7 +943,7 @@ export default function HomePage() {
 
       {/* Floating Spin Available Notification */}
       {showSpinNotification && (
-        <div style={{
+        <div className="spin-notification-popup" style={{
           position: 'fixed',
           bottom: '110px',
           right: '30px',
@@ -1096,13 +1096,13 @@ export default function HomePage() {
           }
 
           /* Mystery box section */
-          .home-page section.dark-section {
+          .home-page section.dark-section:not(.newsletter-section) {
             margin: 40px 0 !important;
             border-radius: 0 !important;
             padding: 64px 20px !important;
           }
-          .home-page section.dark-section h2 { font-size: 2rem !important; }
-          .home-page section.dark-section p { font-size: 0.95rem !important; }
+          .home-page section.dark-section:not(.newsletter-section) h2 { font-size: 2rem !important; }
+          .home-page section.dark-section:not(.newsletter-section) p { font-size: 0.95rem !important; }
 
           /* Gallery section */
           .home-page section[style*="80px 32px"] {

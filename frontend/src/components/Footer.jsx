@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer style={{ borderTop: '1px solid rgba(0,0,0,0.05)', background: '#ffffff' }}>
+    <footer>
       <div className="footer-inner">
         <div className="footer-grid">
           <div className="footer-brand">
@@ -31,7 +31,6 @@ export default function Footer() {
             <h4>Support</h4>
             <ul>
               {[
-                { name: "Track Your Order", path: "/track-order" },
                 { name: "Shipping Policy", path: "/shop" },
                 { name: "Return Policy", path: "/shop" },
                 { name: "Privacy Policy", path: "/shop" },
@@ -46,17 +45,14 @@ export default function Footer() {
             <ul>
               {[
                 { name: "Our Story", path: "/shop" },
-                { name: "Behind the Scenes", path: "/shop" },
-                { name: "Events", path: "/events" },
-                { name: "Akara Club", path: "/shop" },
-                { name: "Wholesale", path: "/shop" }
+                { name: "Events", path: "/events" }
               ].map((item) => (
                 <li key={item.name}><Link to={item.path} className="footer-link">{item.name}</Link></li>
               ))}
             </ul>
           </div>
         </div>
-        <div className="footer-bottom" style={{ marginTop: '60px', paddingTop: '32px', borderTop: '1px solid #f0f0f0' }}>
+        <div className="footer-bottom">
           <p style={{ fontSize: '0.85rem', textAlign: 'center' }}>
             © {new Date().getFullYear()} Akara Keepsakes. All rights reserved. <br/>
             <span style={{ marginTop: '8px', display: 'inline-block' }}>Crafted with passion for collectors worldwide.</span>

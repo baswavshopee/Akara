@@ -53,6 +53,8 @@ export default function AdminPage() {
   const [events, setEvents] = useState([]);
   const [applications, setApplications] = useState([]);
   const [users, setUsers] = useState([]);
+  const [usersPage, setUsersPage] = useState(1);
+  const usersPerPage = 10;
   const [banners, setBanners] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [mysteryBoxes, setMysteryBoxes] = useState([]);
@@ -531,7 +533,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((u) => (
+                  {users.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((u) => (
                     <tr key={u._id}>
                       <td style={tdStyle}>{u.name}</td>
                       <td style={tdStyle}>{u.email}</td>
@@ -562,6 +564,30 @@ export default function AdminPage() {
                 </tbody>
               </table>
             </div>
+            {/* Pagination Controls */}
+            {users.length > usersPerPage && (
+              <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px" }}>
+                <button
+                  onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+                  disabled={usersPage === 1}
+                  className="btn btn-secondary"
+                  style={{ opacity: usersPage === 1 ? 0.5 : 1, cursor: usersPage === 1 ? "not-allowed" : "pointer" }}
+                >
+                  Previous
+                </button>
+                <span style={{ display: "flex", alignItems: "center", fontWeight: 600 }}>
+                  Page {usersPage} of {Math.ceil(users.length / usersPerPage)}
+                </span>
+                <button
+                  onClick={() => setUsersPage((p) => Math.min(Math.ceil(users.length / usersPerPage), p + 1))}
+                  disabled={usersPage === Math.ceil(users.length / usersPerPage)}
+                  className="btn btn-secondary"
+                  style={{ opacity: usersPage === Math.ceil(users.length / usersPerPage) ? 0.5 : 1, cursor: usersPage === Math.ceil(users.length / usersPerPage) ? "not-allowed" : "pointer" }}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
 

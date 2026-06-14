@@ -279,28 +279,6 @@ export default function ProductPage() {
             </div>
 
 
-            {/* Live Customizer Teaser */}
-            <div 
-              style={{
-                marginBottom: '30px',
-                padding: '16px',
-                background: 'var(--primary)',
-                color: 'white',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                cursor: 'pointer'
-              }}
-              onClick={() => showToast("Customizer loading... Upload your design in the next step!")}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '1.2rem' }}>🎨</span>
-                <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Try Live Customizer Pre-view</span>
-              </div>
-              <span>→</span>
-            </div>
-
             {/* Actions */}
             <div className="detail-actions">
               <button

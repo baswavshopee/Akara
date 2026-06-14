@@ -9,9 +9,12 @@ lerna-debug.log*
 
 # Node Modules
 node_modules/
-dist/
 dist-ssr/
 *.local
+
+# Keep frontend/dist (pre-built for Hostinger upload)
+dist/
+!frontend/dist/
 
 # Environment Variables (VERY IMPORTANT TO IGNORE)
 .env
@@ -37,3 +40,7 @@ dist-ssr/
 
 # Mac
 .DS_Store
+
+# Dev scratch / brain dump directories
+brain/
+scratch/

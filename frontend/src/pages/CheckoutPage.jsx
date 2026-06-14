@@ -386,7 +386,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={handleApplyCoupon}
-                  style={{ background: "var(--dark)", color: "white", border: "none", padding: "0 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", textTransform: "uppercase" }}
+                  style={{ background: "var(--dark)", color: "var(--bg)", border: "none", padding: "0 20px", fontWeight: 700, cursor: "pointer", fontSize: "0.8rem", textTransform: "uppercase" }}
                 >
                   Apply
                 </button>

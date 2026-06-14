@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 require("dotenv").config();
 
 const productRoutes = require("./routes/productRoutes");
@@ -72,7 +73,10 @@ app.use("/api/newsletter", sensitiveLimiter, newsletterRoutes);
 app.use("/api/mystery-boxes", mysteryBoxRoutes);
 app.use("/api/products/:id/reviews", reviewRoutes);
 
-app.get("/", (_, res) => res.json({ message: "Akara API running" }));
+// Serve built React frontend
+const distPath = path.join(__dirname, "../frontend/dist");
+app.use(express.static(distPath));
+app.get("*", (_, res) => res.sendFile(path.join(distPath, "index.html")));
 
 async function deleteExpiredEvents() {
   const { error } = await supabase
