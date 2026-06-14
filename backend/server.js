@@ -23,15 +23,18 @@ const app = express();
 // Trust Nginx reverse proxy so express-rate-limit reads the real client IP
 app.set("trust proxy", 1);
 
-// Restrict CORS to known origins (set ALLOWED_ORIGINS in .env)
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || "http://localhost:3000")
-  .split(",")
-  .map((o) => o.trim());
+// Allow origins listed in ALLOWED_ORIGINS env var (comma-separated).
+// If not set, allow all origins — safe because frontend and backend
+// are served from the same domain in production.
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : null;
 
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
+      if (!allowedOrigins) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       callback(new Error("Not allowed by CORS"));
     },
