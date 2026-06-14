@@ -12,9 +12,8 @@ node_modules/
 dist-ssr/
 *.local
 
-# Keep frontend/dist (pre-built for Hostinger upload)
+# frontend/dist is not used — build outputs to backend/public/
 dist/
-!frontend/dist/
 
 # Environment Variables (VERY IMPORTANT TO IGNORE)
 .env

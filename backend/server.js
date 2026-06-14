@@ -73,10 +73,10 @@ app.use("/api/newsletter", sensitiveLimiter, newsletterRoutes);
 app.use("/api/mystery-boxes", mysteryBoxRoutes);
 app.use("/api/products/:id/reviews", reviewRoutes);
 
-// Serve built React frontend
-const distPath = path.join(__dirname, "../frontend/dist");
-app.use(express.static(distPath));
-app.get("*", (_, res) => res.sendFile(path.join(distPath, "index.html")));
+// Serve built React frontend (built into backend/public by vite)
+const publicPath = path.join(__dirname, "public");
+app.use(express.static(publicPath));
+app.get("*", (_, res) => res.sendFile(path.join(publicPath, "index.html")));
 
 async function deleteExpiredEvents() {
   const { error } = await supabase
