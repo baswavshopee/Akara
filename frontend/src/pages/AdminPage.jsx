@@ -533,15 +533,15 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {users.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((u) => (
-                    <tr key={u.id}>
+                  {users.slice((usersPage - 1) * usersPerPage, usersPage * usersPerPage).map((u, i) => (
+                    <tr key={u.id} style={{ background: i % 2 === 0 ? "var(--bg-alt)" : "var(--card-bg)" }}>
                       <td style={tdStyle}>{u.name}</td>
                       <td style={tdStyle}>{u.email}</td>
                       <td style={tdStyle}>
                         <span style={{
-                          padding: "3px 10px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 700,
-                          background: u.role === "admin" ? "var(--primary)" : "#e2e8f0",
-                          color: u.role === "admin" ? "white" : "var(--dark)",
+                          padding: "4px 12px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 700,
+                          background: u.role === "admin" ? "#e65c00" : "#4f46e5",
+                          color: "#ffffff",
                         }}>
                           {u.role}
                         </span>

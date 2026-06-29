@@ -12,6 +12,15 @@ export default function Footer() {
             <p style={{ maxWidth: '300px', fontSize: '0.9rem', lineHeight: 1.7 }}>
               Crafting premium custom keepsakes tailored to your unique vision. From badges to plaques, we turn memories into tangible art.
             </p>
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <a
+                href="mailto:hello@akarakeepsakes.com"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'inherit', textDecoration: 'none', opacity: 0.85 }}
+              >
+                <span style={{ fontSize: '1rem' }}>✉️</span>
+                hello@akarakeepsakes.com
+              </a>
+            </div>
             <div className="social-links" style={{ display: 'flex', gap: '15px', marginTop: '24px' }}>
               <a href="#" className="social-icon">📸</a>
               <a href="#" className="social-icon">💬</a>
@@ -34,10 +43,12 @@ export default function Footer() {
                 { name: "Shipping Policy", path: "/shop" },
                 { name: "Return Policy", path: "/shop" },
                 { name: "Privacy Policy", path: "/shop" },
-                { name: "Contact Us", path: "/shop" }
               ].map((item) => (
                 <li key={item.name}><Link to={item.path} className="footer-link">{item.name}</Link></li>
               ))}
+              <li>
+                <a href="mailto:hello@akarakeepsakes.com" className="footer-link">Contact Us</a>
+              </li>
             </ul>
           </div>
           <div className="footer-col">

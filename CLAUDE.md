@@ -67,6 +67,12 @@ CREATE TABLE applications (
   message TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE newsletters (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 ```
 
 Backend `.env` requires: `PORT`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.

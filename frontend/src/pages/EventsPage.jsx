@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Spinner from "../components/Spinner";
 import { useToast } from "../context/ToastContext";
@@ -23,6 +24,7 @@ const fieldInput = {
 };
 
 export default function EventsPage() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [applyModal, setApplyModal] = useState(null);
@@ -67,6 +69,9 @@ export default function EventsPage() {
   return (
     <div className="page" style={{ paddingTop: "100px", minHeight: "100vh" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "48px 32px" }}>
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
         <div className="section-header">
           <h1 className="section-title">
             Upcoming <span>Events</span>
@@ -147,13 +152,13 @@ export default function EventsPage() {
           <p style={{ fontSize: "1.1rem", opacity: 0.9, marginBottom: 32, maxWidth: 600, marginInline: "auto" }}>
             From curation to execution, we bring premium identity and artistry to your corporate or private gatherings.
           </p>
-          <button 
-            className="btn btn-white-pill" 
-            onClick={() => window.location.href = "mailto:hello@akarakeepsakes.com"}
-            style={{ padding: "16px 40px", background: "white", color: "var(--primary)", border: "none", borderRadius: 50, fontWeight: 700, cursor: "pointer", fontSize: "1rem" }}
+          <a
+            href="mailto:hello@akarakeepsakes.com"
+            className="btn btn-white-pill"
+            style={{ padding: "16px 40px", background: "white", color: "var(--primary)", border: "none", borderRadius: 50, fontWeight: 700, cursor: "pointer", fontSize: "1rem", textDecoration: "none", display: "inline-block" }}
           >
             Contact Us Now →
-          </button>
+          </a>
         </div>
       </div>
 

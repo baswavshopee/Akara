@@ -668,6 +668,9 @@ img { max-width: 100%; display: block; }
 .btn-add-cart-lg { flex: 1; min-width: 160px; padding: 15px 28px; background: var(--primary); color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
 .btn-add-cart-lg:hover { background: var(--dark); color: var(--bg); transform: translateY(-2px); box-shadow: 0 6px 24px rgba(4,4,4,0.25); }
 .btn-add-cart-lg:disabled { background: var(--gray-light); color: var(--gray); cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-buy-now-lg { flex: 1; min-width: 160px; padding: 15px 28px; background: var(--dark); color: var(--bg); border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 8px; }
+.btn-buy-now-lg:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: 0 6px 24px rgba(4,4,4,0.25); }
+.btn-buy-now-lg:disabled { background: var(--gray-light); color: var(--gray); cursor: not-allowed; transform: none; box-shadow: none; }
 .btn-wishlist-lg { padding: 15px 20px; background: white; border: 2px solid var(--gray-light); border-radius: 10px; font-size: 1.2rem; cursor: pointer; transition: var(--transition); }
 .btn-wishlist-lg:hover { border-color: var(--secondary); }
 .detail-features { display: flex; flex-direction: column; gap: 10px; padding: 18px; background: var(--gray-light); border-radius: var(--radius); }
@@ -1532,6 +1535,7 @@ footer { background: var(--card-bg); color: var(--text); padding: 80px 24px 40px
   .detail-title { font-size: 1.6rem; margin-bottom: 10px; }
   .detail-price { font-size: 1.7rem; }
   .btn-add-cart-lg { width: 100%; min-height: 52px; }
+  .btn-buy-now-lg { width: 100%; min-height: 52px; }
   .qty-row { flex-direction: column; align-items: stretch; gap: 14px; }
   .qty-control { width: 100%; justify-content: space-between; }
   .qty-btn { padding: 12px; width: 48px; min-height: 48px; }

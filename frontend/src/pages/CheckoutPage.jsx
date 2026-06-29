@@ -296,6 +296,9 @@ export default function CheckoutPage() {
         }
       `}</style>
       <div className="main-content">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          ← Back to Cart
+        </button>
         <h1 className="elegant-title" style={{ fontSize: "clamp(2rem, 6vw, 3rem)", marginBottom: "32px", color: "var(--dark)" }}>
           Check<span className="italic">out</span>
         </h1>

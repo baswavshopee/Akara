@@ -147,6 +147,14 @@ export default function HomePage() {
 
   const { user } = useAuth();
   const { addToCart } = useCart();
+
+  useEffect(() => {
+    if (showMysteryModal && user) {
+      setMysteryName(user?.user_metadata?.full_name || "");
+      setMysteryEmail(user?.email || "");
+      setMysteryStatus(null);
+    }
+  }, [showMysteryModal]);
   const [canSpin, setCanSpin] = useState(true);
   const [spinCountdown, setSpinCountdown] = useState("");
   const [showSpinNotification, setShowSpinNotification] = useState(false);
@@ -714,12 +722,18 @@ export default function HomePage() {
           <p>Subscribe to get early access to new drops, exclusive events, and 10% off your first order.</p>
           <form className="newsletter-form" onSubmit={async (e) => {
             e.preventDefault();
+            setNewsletterStatus(null);
             try {
               await axios.post("/api/newsletter", { email: newsletterEmail });
               setNewsletterStatus("success");
               setNewsletterEmail("");
-            } catch {
-              setNewsletterStatus("error");
+            } catch (err) {
+              const serverMsg = err?.response?.data?.error || "";
+              if (serverMsg.toLowerCase().includes("duplicate") || serverMsg.toLowerCase().includes("already")) {
+                setNewsletterStatus("already");
+              } else {
+                setNewsletterStatus("error");
+              }
             }
           }}>
             <input
@@ -733,10 +747,13 @@ export default function HomePage() {
             <button type="submit" className="btn btn-primary">Join Now</button>
           </form>
           {newsletterStatus === "success" && (
-            <p style={{ color: "var(--primary)", marginTop: "12px", fontWeight: 700 }}>You're subscribed!</p>
+            <p style={{ color: "var(--primary)", marginTop: "12px", fontWeight: 700 }}>🎉 You're subscribed! Welcome to the Akara Club.</p>
+          )}
+          {newsletterStatus === "already" && (
+            <p style={{ color: "var(--primary)", marginTop: "12px", fontWeight: 700 }}>✅ You're already subscribed — stay tuned for updates!</p>
           )}
           {newsletterStatus === "error" && (
-            <p style={{ color: "#ef4444", marginTop: "12px", fontWeight: 700 }}>Something went wrong. Please try again.</p>
+            <p style={{ color: "#ef4444", marginTop: "12px", fontWeight: 700 }}>Unable to subscribe right now. Please try again later.</p>
           )}
         </div>
       </section>
@@ -839,7 +856,20 @@ export default function HomePage() {
       {showMysteryModal && user && (
         <div className="wheel-modal" onClick={() => setShowMysteryModal(false)}>
           <div className="wheel-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', textAlign: 'left', padding: '40px 30px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button style={{ position: 'absolute', top: '20px', right: '20px', background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }} onClick={() => setShowMysteryModal(false)}>×</button>
+            <button
+              onClick={() => setShowMysteryModal(false)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: 'var(--bg-alt)', border: '1px solid var(--border)',
+                color: 'var(--text)', fontSize: '1.2rem', lineHeight: 1,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.2s, color 0.2s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--primary)'; e.currentTarget.style.color = 'white'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-alt)'; e.currentTarget.style.color = 'var(--text)'; }}
+              aria-label="Close"
+            >✕</button>
             <h2 style={{ fontFamily: 'Outfit', fontWeight: 800, marginBottom: '20px', textAlign: 'center' }}>Unlock your <span>Mystery Box</span></h2>
             
             {mysteryStatus === "success" ? (
@@ -853,12 +883,12 @@ export default function HomePage() {
               <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Your Name *</label>
-                    <input type="text" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} value={mysteryName || user?.user_metadata?.full_name || ""} onChange={(e) => setMysteryName(e.target.value)} required />
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text)' }}>Your Name *</label>
+                    <input type="text" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem', background: 'var(--bg)', color: 'var(--text)' }} value={mysteryName} onChange={(e) => setMysteryName(e.target.value)} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Email Address *</label>
-                    <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem', background: 'var(--gray-light)' }} value={mysteryEmail || user?.email || ""} onChange={(e) => setMysteryEmail(e.target.value)} readOnly />
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700, color: 'var(--text)' }}>Email Address *</label>
+                    <input type="email" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem', background: 'var(--bg-alt)', color: 'var(--text)', cursor: 'not-allowed', opacity: 0.8 }} value={mysteryEmail} readOnly />
                   </div>
                 </div>
 
@@ -867,7 +897,7 @@ export default function HomePage() {
                   <select
                     value={mysteryCategory}
                     onChange={(e) => setMysteryCategory(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }}
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem', background: 'var(--bg)', color: 'var(--text)' }}
                   >
                     <option>Comic-verse</option>
                     <option>Anime</option>
@@ -900,16 +930,16 @@ export default function HomePage() {
 
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 700 }}>Customization (Optional):</label>
-                  <input 
-                    type="text" 
-                    placeholder="Mention your favorite themes or interests..." 
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #ccc', fontSize: '1rem' }} 
+                  <input
+                    type="text"
+                    placeholder="Mention your favorite themes or interests..."
+                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '1rem', background: 'var(--bg)', color: 'var(--text)' }}
                     value={mysteryPreferences}
                     onChange={(e) => setMysteryPreferences(e.target.value)}
                   />
                 </div>
 
-                <p style={{ fontSize: '0.9rem', color: '#555', lineHeight: '1.6', marginBottom: '24px' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
                   Want a mix of themes? That works too. Simply mention your favorite characters, series, artists, teams, aesthetics, or interests in the customization box, and we'll curate a box specially tailored for you.
                 </p>
 

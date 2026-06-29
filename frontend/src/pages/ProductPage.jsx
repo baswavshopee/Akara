@@ -63,6 +63,16 @@ export default function ProductPage() {
     showToast("Added to cart!");
   };
 
+  const handleBuyNow = () => {
+    if (!user) {
+      showToast("Please log in to continue");
+      navigate("/login");
+      return;
+    }
+    addToCart(product, qty);
+    navigate("/checkout");
+  };
+
   const bannerImg = product && (product.bannerImage || (banners && banners[product.badge]));
 
   // Use same image 3x as thumbnails (real app would have multiple images)
@@ -87,9 +97,9 @@ export default function ProductPage() {
           <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{product.name}</span>
         </div>
 
-        <Link to={`/category/${product.category}`} className="back-btn">
-          ← Back to {product.category}
-        </Link>
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
 
         {/* Product Grid */}
         <div className="product-detail-grid">
@@ -251,6 +261,13 @@ export default function ProductPage() {
                 onClick={handleAddToCart}
               >
                 🛒 Add to Cart
+              </button>
+              <button
+                className="btn-buy-now-lg"
+                disabled={!product.inStock}
+                onClick={handleBuyNow}
+              >
+                ⚡ Buy Now
               </button>
               <button
                 className="btn-wishlist-lg"

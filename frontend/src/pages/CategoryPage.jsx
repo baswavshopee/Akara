@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useBanners } from "../context/BannerContext";
 import ProductCard from "../components/ProductCard";
@@ -9,6 +9,7 @@ const THEMES = ["Comicverse", "Anime", "Western Pop", "Eastern Pop", "Mythology"
 
 export default function CategoryPage() {
   const { categoryName } = useParams();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTheme = searchParams.get("theme") || "All";
   
@@ -94,6 +95,10 @@ export default function CategoryPage() {
           <span>›</span>
           <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{categoryName}</span>
         </div>
+
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          ← Back
+        </button>
 
         {/* Theme Filter Section */}
         <div style={{ marginBottom: "40px" }}>

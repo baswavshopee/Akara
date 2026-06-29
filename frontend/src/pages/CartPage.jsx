@@ -46,6 +46,9 @@ export default function CartPage() {
         }
       `}</style>
       <div className="main-content">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          ← Continue Shopping
+        </button>
         <h1 className="elegant-title" style={{ fontSize: 'clamp(2rem, 6vw, 3rem)', marginBottom: '32px', color: 'var(--dark)' }}>
           Your <span className="italic">Cart</span>
         </h1>
