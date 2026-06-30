@@ -20,6 +20,7 @@ const emptyEvent = {
 const thStyle = {
   padding: "14px 16px", textAlign: "left", fontFamily: "Outfit",
   fontSize: "0.82rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1,
+  color: "white",
 };
 const tdStyle = { padding: "12px 16px", fontSize: "0.9rem", borderBottom: "1px solid var(--border)", color: "var(--text)" };
 const actionBtn = {
@@ -540,7 +541,7 @@ export default function AdminPage() {
                       <td style={tdStyle}>
                         <span style={{
                           padding: "4px 12px", borderRadius: 20, fontSize: "0.78rem", fontWeight: 700,
-                          background: u.role === "admin" ? "#e65c00" : "#4f46e5",
+                          background: u.role === "admin" ? "#e65c00" : "#2563eb",
                           color: "#ffffff",
                         }}>
                           {u.role}
@@ -553,7 +554,7 @@ export default function AdminPage() {
                           style={{
                             ...actionBtn,
                             background: u.role === "admin" ? "#e53e3e" : "var(--primary)",
-                            color: "white",
+                            color: u.role === "admin" ? "#ffffff" : "#000000",
                           }}
                         >
                           {u.role === "admin" ? "Remove Admin" : "Make Admin"}
@@ -566,23 +567,31 @@ export default function AdminPage() {
             </div>
             {/* Pagination Controls */}
             {users.length > usersPerPage && (
-              <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginTop: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "12px", marginTop: "20px" }}>
                 <button
                   onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
                   disabled={usersPage === 1}
-                  className="btn btn-secondary"
-                  style={{ opacity: usersPage === 1 ? 0.5 : 1, cursor: usersPage === 1 ? "not-allowed" : "pointer" }}
+                  style={{
+                    padding: "8px 20px", border: "2px solid var(--border)", borderRadius: 8,
+                    background: "var(--card-bg)", color: "var(--text)", fontWeight: 600,
+                    fontSize: "0.9rem", cursor: usersPage === 1 ? "not-allowed" : "pointer",
+                    opacity: usersPage === 1 ? 0.4 : 1, transition: "all 0.2s",
+                  }}
                 >
                   Previous
                 </button>
-                <span style={{ display: "flex", alignItems: "center", fontWeight: 600 }}>
+                <span style={{ display: "flex", alignItems: "center", fontWeight: 600, color: "var(--text)" }}>
                   Page {usersPage} of {Math.ceil(users.length / usersPerPage)}
                 </span>
                 <button
                   onClick={() => setUsersPage((p) => Math.min(Math.ceil(users.length / usersPerPage), p + 1))}
                   disabled={usersPage === Math.ceil(users.length / usersPerPage)}
-                  className="btn btn-secondary"
-                  style={{ opacity: usersPage === Math.ceil(users.length / usersPerPage) ? 0.5 : 1, cursor: usersPage === Math.ceil(users.length / usersPerPage) ? "not-allowed" : "pointer" }}
+                  style={{
+                    padding: "8px 20px", border: "2px solid var(--border)", borderRadius: 8,
+                    background: "var(--card-bg)", color: "var(--text)", fontWeight: 600,
+                    fontSize: "0.9rem", cursor: usersPage === Math.ceil(users.length / usersPerPage) ? "not-allowed" : "pointer",
+                    opacity: usersPage === Math.ceil(users.length / usersPerPage) ? 0.4 : 1, transition: "all 0.2s",
+                  }}
                 >
                   Next
                 </button>
