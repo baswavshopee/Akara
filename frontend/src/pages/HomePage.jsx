@@ -728,8 +728,9 @@ export default function HomePage() {
               setNewsletterStatus("success");
               setNewsletterEmail("");
             } catch (err) {
+              const status = err?.response?.status;
               const serverMsg = err?.response?.data?.error || "";
-              if (serverMsg.toLowerCase().includes("duplicate") || serverMsg.toLowerCase().includes("already")) {
+              if (status === 409 || serverMsg.toLowerCase().includes("already") || serverMsg.toLowerCase().includes("duplicate")) {
                 setNewsletterStatus("already");
               } else {
                 setNewsletterStatus("error");

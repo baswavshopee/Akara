@@ -13,9 +13,16 @@ router.post("/", async (req, res) => {
 
     const { error } = await supabase
       .from("newsletters")
-      .upsert([{ email: email.toLowerCase().trim() }], { onConflict: "email" });
+      .insert([{ email: email.toLowerCase().trim() }]);
 
-    if (error) throw error;
+    if (error) {
+      // Postgres unique_violation — email already subscribed
+      if (error.code === "23505" || (error.message && error.message.toLowerCase().includes("duplicate"))) {
+        return res.status(409).json({ error: "already subscribed" });
+      }
+      throw error;
+    }
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
